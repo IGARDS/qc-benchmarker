@@ -13,6 +13,10 @@ from werkzeug.utils import secure_filename
 
 import tempfile
 
+import subprocess
+
+import glob
+
 #from pydrop import config
 
 #blueprint = Blueprint('templated', __name__, template_folder='templates')
@@ -36,27 +40,35 @@ def make_celery(app):
 
 celery = make_celery(app)
 
-@celery.task(name="tasks.add")
-def add(x, y):
-    return x + y
+output_dir = "/tmp"
 
-@app.route('/')
-@app.route('/index')
-def index():
-    # Route to serve the upload form
-    tmpdir = tempfile.mkdtemp(prefix="upload_files_")
+@app.route('/<work_dir>')
+@app.route('/index/<work_dir>')
+def index(work_dir):
+    if work_dir == None:
+        # Route to serve the upload form
+        work_dir = tempfile.mkdtemp(prefix="qc_benchmarker_",dir=output_dir)
+    if output_dir not in work_dir:
+        work_dir = output_dir+"/"+work_dir
+    raw_files = [file.split('/')[-1] for file in glob.glob("%s/*.raw"%work_dir)]
+    mzML_files = [file.split('/')[-1] for file in glob.glob("%s/*.mzML"%work_dir)]
+    result_files = []
+    for result_file in glob.glob("%s/*.result"%work_dir):
+        result_files.append(tuple(open(result_file).read().split("\t")))
     return render_template('index.html',
                            page_name='QC Benchmarker',
-                           project_name="qc-benchmarker",tmpdir=tmpdir
+                           project_name="qc-benchmarker",
+                           work_dir=work_dir,
+                           raw_files=raw_files,
+                           result_files=result_files
                           )
-
 
 @app.route('/upload', methods=['POST'])
 def upload():
     file = request.files['file']
-    tmpdir = request.form["tmpdir"]
+    work_dir = request.form["work_dir"]
 
-    save_path = os.path.join(tmpdir, secure_filename(file.filename))
+    save_path = os.path.join(work_dir, secure_filename(file.filename))
     current_chunk = int(request.form['dzchunkindex'])
 
     # If the file already exists it's ok if we are appending to it,
@@ -93,21 +105,33 @@ def upload():
 
     return make_response(("Chunk upload successful", 200))
 
-@app.route("/test")
-def hello_world(x=16, y=16):
-    x = int(request.args.get("x", x))
-    y = int(request.args.get("y", y))
-    res = add.apply_async((x, y))
-    context = {"id": res.task_id, "x": x, "y": y}
-    result = "add((x){}, (y){})".format(context['x'], context['y'])
-    goto = "{}".format(context['id'])
-    return jsonify(result=result, goto=goto)
+@celery.task(name="tasks.qc_preprocess")
+def qc_preprocess_task(raw_files):
+    results = []
+    for raw_file in raw_files:
+        work_dir = "/".join(raw_file.split("/")[0:-1])
+        output_dir = "%s/%s"%(work_dir,qc_preprocess_task.request.id)
+        #try:
+        os.mkdir(output_dir)
+        #except:
+        #    pass
+        results.append(str(subprocess.check_output("cd %s; R -e 'QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/preprocess.Rmd\",output_dir=\"%s\")'"%(work_dir,raw_file,output_dir),shell=True)))
+    return repr(results)
 
-@app.route("/test/result/<task_id>")
-def show_result(task_id):
-    retval = add.AsyncResult(task_id).get(timeout=1.0)
+@app.route("/qc_preprocess", methods=['POST'])
+def qc_preprocess():
+    content = request.json
+    work_dir = content["work_dir"]
+    raw_files = glob.glob("%s/*.raw"%work_dir)
+    res = qc_preprocess_task.delay(raw_files)
+    open("%s/%s.result"%(work_dir,res.task_id),"w").write("qc_preprocess(%s)"%str(raw_files)+"\t/qc_preprocess/result/"+str(res.task_id))
+    context = {"id": res.task_id, "work_dir": work_dir}
+    return jsonify(context)
+
+@app.route("/qc_preprocess/result/<task_id>")
+def qc_preprocess_result(task_id):
+    retval = qc_preprocess_task.AsyncResult(task_id).get(timeout=1.0)
     return repr(retval)
-
 
 if __name__ == "__main__":
     port = int(environ.get("PORT", 7777))

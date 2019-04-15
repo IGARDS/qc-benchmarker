@@ -1,8 +1,5 @@
-redis-server 
+nohup redis-server > /var/log/redis.log 2>&1 &
 
-celery -A app.celery worker
-
-python app.py 
 
 
 

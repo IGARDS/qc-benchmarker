@@ -12,14 +12,45 @@
     <script type="application/javascript" 
      src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.4.0/min/dropzone.min.js">
     </script>
+    
+    <head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    </head>
 
-    <title>File Dropper</title>
+    <title>QC Benchmarker</title>
+    
+    <style>
+        .btn-group button {
+          background-color: #4CAF50; /* Green background */
+          border: 1px solid green; /* Green border */
+          color: white; /* White text */
+          padding: 10px 24px; /* Some padding */
+          cursor: pointer; /* Pointer/hand icon */
+          float: left; /* Float the buttons side by side */
+        }
+
+        /* Clear floats (clearfix hack) */
+        .btn-group:after {
+          content: "";
+          clear: both;
+          display: table;
+        }
+
+        .btn-group button:not(:last-child) {
+          border-right: none; /* Prevent double borders */
+        }
+
+        /* Add a background color on hover */
+        .btn-group button:hover {
+          background-color: #3e8e41;
+        }
+    </style>
 </head>
 <body>
 
 <form method="POST" action='/upload' class="dropzone dz-clickable" 
       id="dropper" enctype="multipart/form-data">
-    <input type="hidden" id="tmpdir" name="tmpdir" value="{{ tmpdir }}">
+    <input type="hidden" id="work_dir" name="work_dir" value="{{ work_dir }}">
 </form>
 
 <script type="application/javascript">
@@ -28,9 +59,101 @@
         chunking: true,
         forceChunking: true,
         url: '/upload',
-        maxFilesize: 1025, // megabytes
-        chunkSize: 1000000 // bytes
+        maxFilesize: 5025, // megabytes
+        chunkSize: 10000000 // bytes
     }
 </script>
+    
+<div id="raw_files_list">
+    <hr>
+    <h2>Raw Files</h2>
+    <h4>Click to refresh</h4>
+    <ul>
+    {% for raw_file in raw_files %}
+        <li>{{ raw_file }}</li>
+    {% endfor %}
+    </ul>
+    <hr>
+</div>
+    
+<script>
+$( "#raw_files_list" ).click(function() {
+  $( this ).load(document.URL +  ' #raw_files_list');
+});
+</script>
+    
+<div id="mzML_files_list">
+    <h2>mzML Files</h2>
+    <h4>Click to refresh</h4>
+    <ul>
+    {% for mzML_file in mzML_files %}
+        <li>{{ mzML_file }}</li>
+    {% endfor %}
+    </ul>
+    <hr>
+</div>
+    
+<script>
+$( "#mzML_files_list" ).click(function() {
+  $( this ).load(document.URL +  ' #mzML_files_list');
+});
+</script>
+    
+<h2>Available Commands</h2>
+    
+<div class="btn-group">
+  <button id='preprocess'>Preprocess</button>
+  <button>Blah1</button>
+  <button>Blah2</button>
+</div>
+   
+<div id="result_files_list">
+    <hr>
+    <h2>Results</h2>
+    <h4>Click to refresh</h4>
+    <ul>
+    {% for result_name,result_url in result_files %}
+        <li><a href="{{ result_url }}">{{ result_name }}</a></li>
+    {% endfor %}
+    </ul>
+    <hr>
+</div>
+    
+<script>
+$( "#result_files_list" ).click(function() {
+  $( this ).load(document.URL +  ' #result_files_list');
+});
+</script>
+    
+<script>
+makePostCall = function (url, data) { // here the data and url are not hardcoded anymore
+   var json_data = JSON.stringify(data);
+
+    return $.ajax({
+        type: "POST",
+        url: url,
+        data: json_data,
+        dataType: "json",
+        contentType: "application/json;charset=utf-8"
+    });
+}
+    
+$( "#preprocess" ).click(function() {
+    makePostCall("/qc_preprocess", {'work_dir' : '{{ work_dir }}'})
+    .then(function successCallback(response) {
+       // this callback will be called asynchronously
+       // when the response is available
+
+        console.log(response)
+
+    }, function errorCallback(response) {
+       // called asynchronously if an error occurs
+       // or server returns response with an error status.
+        alert("Something went wrong!")
+    })
+});
+    
+</script>
+    
 </body>
 </html>

@@ -1,0 +1,41 @@
+---
+title: "Preprocessing for QC Pipeline"
+author: "Magnus Palmblad. Modified by Paul Anderson"
+date: "October 25, 2018"
+output:
+  html_document: default
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. This Markdown contains all steps for a rich QC analysis from a HeLa cell digest LC-MS/MS dataset based on the [Trans-Proteomic Pipeline](http://tools.proteomecenter.org/wiki/index.php?title=Software:TPP).
+
+
+```{r Global Options, include=FALSE}
+knitr::opts_chunk$set(fig.width=5, fig.height=5, fig.align='center', warning=FALSE, message=FALSE)
+```
+
+
+#### 1. Load R packages and specify the search parameters and sequence database
+
+First we load R packages, specify the parameters and sequence database:
+
+```{r Setup}
+library(mzR)
+library(scales)
+REFERENCE <- '/data/2018-10-15_HeLa_OTOT'                   # reference (could be local)
+#QUERY <- '2018-10-18_HeLa_OTOT'                             # query for QC
+#AMOUNT_INJECTED <- 200                                      # ng HeLa injected (reference)
+#SPECTRAST_LIBRARY <- 'HeLa.splib'                           # HeLa library
+#FASTA_FILE <- 'up000005640.fasta'                           # sequence database
+
+#2018-10-15_HeLa_OTOT.raw  HeLa.splib  qc_pipeline.Rmd  qc_pipeline.pdf  up000005640.fasta  wetransfer-48c354.zip
+```
+
+
+#### 2. Convert raw data to mzML
+
+Then we convert the raw file to mzML:
+
+```{r Msconvert, eval=TRUE}
+#system(paste('wine msconvert', paste(REFERENCE,'.raw',sep=''),'-v --mzML'))     # convert reference file
+system(paste('wine msconvert', paste(QUERY,'.raw',sep=''),'-v --mzML'))         # convert query file
+```
