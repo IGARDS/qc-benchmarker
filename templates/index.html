@@ -64,38 +64,42 @@
     }
 </script>
     
-<div id="raw_files_list">
-    <hr>
-    <h2>Raw Files</h2>
-    <h4>Click to refresh</h4>
-    <ul>
-    {% for raw_file in raw_files %}
-        <li>{{ raw_file }}</li>
-    {% endfor %}
-    </ul>
-    <hr>
+<hr>
+<h2>Raw Files</h2><p>
+<div id="raw_files_list">    
+{% for raw_file in raw_files %}
+    <input type="checkbox" name="raw_files_array[]" />{{ raw_file }}<p>
+{% endfor %}
 </div>
+<div class="btn-group">
+<form>
+<button id='click_refresh_raw_files'>Click to Refresh</button>
+</form>
+</div>
+<hr>
     
 <script>
-$( "#raw_files_list" ).click(function() {
-  $( this ).load(document.URL +  ' #raw_files_list');
+$( "#click_refresh_raw_files" ).click(function() {
+  $( "#raw_files_list" ).load(document.URL +  ' #raw_files_list');
 });
 </script>
     
-<div id="mzML_files_list">
-    <h2>mzML Files</h2>
-    <h4>Click to refresh</h4>
-    <ul>
-    {% for mzML_file in mzML_files %}
-        <li>{{ mzML_file }}</li>
-    {% endfor %}
-    </ul>
-    <hr>
+<h2>mzML Files</h2><p>
+<div id="mzML_files_list">    
+{% for mzML_file in mzML_files %}
+    <input type="checkbox" name="mzML_files_array[]" />{{ mzML_file }}<p>
+{% endfor %}
 </div>
+<div class="btn-group">
+<form>
+<button id='click_refresh_mzML_files'>Click to Refresh</button>
+</form>
+</div>
+<hr>
     
 <script>
-$( "#mzML_files_list" ).click(function() {
-  $( this ).load(document.URL +  ' #mzML_files_list');
+$( "#click_refresh_mzML_files" ).click(function() {
+  $( "#mzML_files_list" ).load(document.URL +  ' #mzML_files_list');
 });
 </script>
     

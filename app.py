@@ -1,12 +1,13 @@
 from __future__ import absolute_import
 from os import path, environ
 import json
-from flask import Flask, Blueprint, abort, jsonify, request, session
+from flask import Flask, Blueprint, abort, jsonify, request, session, send_from_directory, url_for
 import settings
 from celery import Celery
-
+import urllib.parse
 import logging
 import os
+import sys as sys2
 
 from flask import render_template, Blueprint, request, make_response
 from werkzeug.utils import secure_filename
@@ -42,6 +43,11 @@ celery = make_celery(app)
 
 output_dir = "/tmp"
 
+def glob_ctime_sort(path):
+    files = glob.glob(path)
+    files.sort(key=os.path.getctime)
+    return files
+    
 @app.route('/<work_dir>')
 @app.route('/index/<work_dir>')
 def index(work_dir):
@@ -50,16 +56,18 @@ def index(work_dir):
         work_dir = tempfile.mkdtemp(prefix="qc_benchmarker_",dir=output_dir)
     if output_dir not in work_dir:
         work_dir = output_dir+"/"+work_dir
-    raw_files = [file.split('/')[-1] for file in glob.glob("%s/*.raw"%work_dir)]
-    mzML_files = [file.split('/')[-1] for file in glob.glob("%s/*.mzML"%work_dir)]
-    result_files = []
-    for result_file in glob.glob("%s/*.result"%work_dir):
-        result_files.append(tuple(open(result_file).read().split("\t")))
+    raw_files = [file.split('/')[-1] for file in glob_ctime_sort("%s/*.raw"%work_dir)]
+    mzML_files = [file.split('/')[-1] for file in glob_ctime_sort("%s/*/*.mzML"%work_dir)]
+    print(mzML_files)
+    result_files = glob_ctime_sort("%s/*.result"%work_dir)
+    for i,result_file in enumerate(result_files):
+        result_files[i] = tuple(open(result_file).read().split("\t"))
     return render_template('index.html',
                            page_name='QC Benchmarker',
                            project_name="qc-benchmarker",
                            work_dir=work_dir,
                            raw_files=raw_files,
+                           mzML_files=mzML_files,
                            result_files=result_files
                           )
 
@@ -107,16 +115,17 @@ def upload():
 
 @celery.task(name="tasks.qc_preprocess")
 def qc_preprocess_task(raw_files):
-    results = []
-    for raw_file in raw_files:
+    files = []
+    for i,raw_file in enumerate(raw_files):
+        raw_file_name = raw_file.split("/")[-1]
+        output_file = raw_file_name.replace(".raw",".html")
         work_dir = "/".join(raw_file.split("/")[0:-1])
         output_dir = "%s/%s"%(work_dir,qc_preprocess_task.request.id)
-        #try:
-        os.mkdir(output_dir)
-        #except:
-        #    pass
-        results.append(str(subprocess.check_output("cd %s; R -e 'QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/preprocess.Rmd\",output_dir=\"%s\")'"%(work_dir,raw_file,output_dir),shell=True)))
-    return repr(results)
+        if i == 0:
+            os.mkdir(output_dir)
+        subprocess.check_output("cd %s; R -e 'QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/preprocess.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(work_dir,raw_file.replace(".raw",""),output_dir,output_file),shell=True,stderr=subprocess.STDOUT)
+        files.append("%s/%s"%(output_dir,output_file))
+    return files
 
 @app.route("/qc_preprocess", methods=['POST'])
 def qc_preprocess():
@@ -128,10 +137,26 @@ def qc_preprocess():
     context = {"id": res.task_id, "work_dir": work_dir}
     return jsonify(context)
 
+@app.route('/view_results/<path>')
+def view_results(path):
+    path=urllib.parse.unquote(path)
+    work_dir = "/".join(path.split("/")[0:-1])
+    file_name = path.split("/")[-1]  
+    return send_from_directory(work_dir,file_name)
+
 @app.route("/qc_preprocess/result/<task_id>")
 def qc_preprocess_result(task_id):
-    retval = qc_preprocess_task.AsyncResult(task_id).get(timeout=1.0)
-    return repr(retval)
+    try:
+        files = qc_preprocess_task.AsyncResult(task_id).get(timeout=1.0)
+    except:
+        result = "<html><body>Your task is not finished yet. Try again later.</body></html>"
+        return result
+    
+    result = "<html><body>"
+    for file in files:
+        result += "<a href='"+url_for('view_results',path=urllib.parse.quote(file, safe=''))+"'>%s<p>"%(file)
+    result += "</body></html>"
+    return result
 
 if __name__ == "__main__":
     port = int(environ.get("PORT", 7777))

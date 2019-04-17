@@ -22,6 +22,7 @@ First we load R packages, specify the parameters and sequence database:
 library(mzR)
 library(scales)
 REFERENCE <- '/data/2018-10-15_HeLa_OTOT'                   # reference (could be local)
+print(QUERY)
 #QUERY <- '2018-10-18_HeLa_OTOT'                             # query for QC
 #AMOUNT_INJECTED <- 200                                      # ng HeLa injected (reference)
 #SPECTRAST_LIBRARY <- 'HeLa.splib'                           # HeLa library
@@ -39,3 +40,57 @@ Then we convert the raw file to mzML:
 #system(paste('wine msconvert', paste(REFERENCE,'.raw',sep=''),'-v --mzML'))     # convert reference file
 system(paste('wine msconvert', paste(QUERY,'.raw',sep=''),'-v --mzML'))         # convert query file
 ```
+
+### 3. Look up instrument manufacturer and model from query mzML file
+
+Here we read in instrument metadata from the mzML file using the [mzR](http://bioconductor.org/packages/release/bioc/html/mzR.html) package. 
+
+```{r Extract instrumentInfo}
+query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
+make <- instrumentInfo(query_file)$manufacturer
+model <- instrumentInfo(query_file)$model
+cat('Query file is', make, model)   # look up make and model of file for QC    
+```
+
+
+#### 4. Perform SpectraST search
+
+Next we run comet with the defined parameters on each mzML file separately:
+
+```{r SpectraST search, eval=FALSE}
+system(paste('spectrast -sL', SPECTRAST_LIBRARY, ' -sD', FASTA_FILE,
+             ' -sTAA -sA! -s_HOM4 -sR! -sEpep.xml ', QUERY, '.mzML', sep = ''))
+```
+
+
+#### 5. Validate search results with PeptideProphet
+
+We then validate the comet peptide-spectrum matches using PeptideProphet, keeping only p>=0.95:
+
+```{r PeptideProphet, eval=FALSE}
+system(paste('xinteract -N', sub('$', '.interact.pep.xml', QUERY), 
+             ' -p0.95 -l7 -PPM -O -D', FASTA_FILE, ' ', QUERY, '.pep.xml', sep = ''))
+```
+
+
+### 6. Extract QC values from query and compare with reference
+
+Here we extract and plot the TICs from the mzML files: 
+
+```{r Extract TICs}
+reference_file <- openMSfile(paste(REFERENCE, '.mzML', sep=''))
+query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
+
+reference_TIC <- tic(reference_file)
+query_TIC <- tic(query_file)
+
+cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of reference.',
+    sep='')
+cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC)/sum(reference_TIC), ' ng.',
+    sep='')
+
+plot(reference_TIC[,1], reference_TIC[,2], type="h", lwd=1, col='green', 
+     xlab='retention time (min)', ylab='total ion current')
+lines(query_TIC[,1], query_TIC[,2], type="h", lwd=1, col='blue')
+```
+\begin{center}Figure 1: Total ion chromatograms of reference (green) and query (blue).\end{center}
