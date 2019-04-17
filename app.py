@@ -42,33 +42,47 @@ def make_celery(app):
 celery = make_celery(app)
 
 output_dir = "/tmp"
+if output_dir[-1] != "/":
+    output_dir = output_dir+"/"
 
 def glob_ctime_sort(path):
     files = glob.glob(path)
     files.sort(key=os.path.getctime)
     return files
+
+def get_url(task_id):
+    print(task_id)
+    try:
+        file = preprocess_task.AsyncResult(task_id).get(timeout=1.0)
+    except:
+        return "RUNNING"
     
-@app.route('/<work_dir>')
+    return url_for('view_results',path=urllib.parse.quote(file, safe=''))
+
+@app.route('/index/')
 @app.route('/index/<work_dir>')
-def index(work_dir):
+def index(work_dir=None):
     if work_dir == None:
         # Route to serve the upload form
-        work_dir = tempfile.mkdtemp(prefix="qc_benchmarker_",dir=output_dir)
-    if output_dir not in work_dir:
-        work_dir = output_dir+"/"+work_dir
-    raw_files = [file.split('/')[-1] for file in glob_ctime_sort("%s/*.raw"%work_dir)]
-    mzML_files = [file.split('/')[-1] for file in glob_ctime_sort("%s/*/*.mzML"%work_dir)]
-    print(mzML_files)
-    result_files = glob_ctime_sort("%s/*.result"%work_dir)
+        work_dir = tempfile.mkdtemp(prefix="qc_benchmarker_",dir=output_dir).replace(output_dir,"")
+    raw_files = [file.split('/')[-1].replace(".raw","") for file in glob_ctime_sort("%s%s/*.raw"%(output_dir,work_dir))]
+    result_files = glob_ctime_sort("%s%s/*.result"%(output_dir,work_dir))
+    valid_result_files = {}
     for i,result_file in enumerate(result_files):
-        result_files[i] = tuple(open(result_file).read().split("\t"))
+        try:
+            context = json.loads(open(result_file).read())
+        except:
+            print("Invalid json in %s"%result_file)
+            continue
+        if "method" in context:
+            print(get_url(context["id"]))
+            valid_result_files[context["method"]] = get_url(context["id"])
     return render_template('index.html',
                            page_name='QC Benchmarker',
                            project_name="qc-benchmarker",
                            work_dir=work_dir,
                            raw_files=raw_files,
-                           mzML_files=mzML_files,
-                           result_files=result_files
+                           result_files=valid_result_files
                           )
 
 @app.route('/upload', methods=['POST'])
@@ -113,28 +127,29 @@ def upload():
 
     return make_response(("Chunk upload successful", 200))
 
-@celery.task(name="tasks.qc_preprocess")
-def qc_preprocess_task(raw_files):
-    files = []
-    for i,raw_file in enumerate(raw_files):
-        raw_file_name = raw_file.split("/")[-1]
-        output_file = raw_file_name.replace(".raw",".html")
-        work_dir = "/".join(raw_file.split("/")[0:-1])
-        output_dir = "%s/%s"%(work_dir,qc_preprocess_task.request.id)
-        if i == 0:
-            os.mkdir(output_dir)
-        subprocess.check_output("cd %s; R -e 'QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/preprocess.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(work_dir,raw_file.replace(".raw",""),output_dir,output_file),shell=True,stderr=subprocess.STDOUT)
-        files.append("%s/%s"%(output_dir,output_file))
-    return files
+@celery.task(name="tasks.preprocess")
+def preprocess_task(output_dir,work_dir,raw_file):
+    output_file = raw_file + ".html"
+    output_dir = "%s%s/%s"%(output_dir,work_dir,preprocess_task.request.id)
+    os.mkdir(output_dir)
+    try:
+        cmd = "cd %s; R -e 'QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/preprocess.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(output_dir,raw_file,output_dir,output_file)
+        subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
+    except:
+        print("Error while running: %s"%cmd)
+    file = "%s/%s"%(output_dir,output_file)
+    print(file)
+    return file
 
-@app.route("/qc_preprocess", methods=['POST'])
-def qc_preprocess():
+@app.route("/run/<method>/<raw_file>", methods=['POST'])
+def run(method,raw_file):
     content = request.json
     work_dir = content["work_dir"]
-    raw_files = glob.glob("%s/*.raw"%work_dir)
-    res = qc_preprocess_task.delay(raw_files)
-    open("%s/%s.result"%(work_dir,res.task_id),"w").write("qc_preprocess(%s)"%str(raw_files)+"\t/qc_preprocess/result/"+str(res.task_id))
-    context = {"id": res.task_id, "work_dir": work_dir}
+    #raw_file = output_dir + work_dir + "/" + raw_file+".raw"
+    if method == "preprocess":
+        res = preprocess_task.delay(output_dir,work_dir,raw_file)
+    context = {"id": res.task_id, "method": method, "raw_file": raw_file}
+    open("%s%s/%s.result"%(output_dir,work_dir,res.task_id),"w").write(json.dumps(context, indent=4))
     return jsonify(context)
 
 @app.route('/view_results/<path>')
@@ -144,19 +159,7 @@ def view_results(path):
     file_name = path.split("/")[-1]  
     return send_from_directory(work_dir,file_name)
 
-@app.route("/qc_preprocess/result/<task_id>")
-def qc_preprocess_result(task_id):
-    try:
-        files = qc_preprocess_task.AsyncResult(task_id).get(timeout=1.0)
-    except:
-        result = "<html><body>Your task is not finished yet. Try again later.</body></html>"
-        return result
-    
-    result = "<html><body>"
-    for file in files:
-        result += "<a href='"+url_for('view_results',path=urllib.parse.quote(file, safe=''))+"'>%s<p>"%(file)
-    result += "</body></html>"
-    return result
+
 
 if __name__ == "__main__":
     port = int(environ.get("PORT", 7777))

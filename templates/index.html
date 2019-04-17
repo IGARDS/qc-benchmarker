@@ -44,9 +44,26 @@
         .btn-group button:hover {
           background-color: #3e8e41;
         }
+        
+        iframe[seamless]{
+            background-color: transparent;
+            border: 0px none transparent;
+            padding: 0px;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
+    
+Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}">TBA</a><br><br>
+    
+<script type="application/javascript">
+    if (!document.URL.includes("{{ work_dir }}")) {
+        document.getElementById('save_url').innerHTML = document.URL +"{{ work_dir }}" 
+    } else {
+        document.getElementById('save_url').innerHTML = document.URL
+    }
+</script>
 
 <form method="POST" action='/upload' class="dropzone dz-clickable" 
       id="dropper" enctype="multipart/form-data">
@@ -68,7 +85,7 @@
 <h2>Raw Files</h2><p>
 <div id="raw_files_list">    
 {% for raw_file in raw_files %}
-    <input type="checkbox" name="raw_files_array[]" />{{ raw_file }}<p>
+    <input type="checkbox" value="{{ raw_file }}" id="raw_files_array" name="raw_files_array[]" />{{ raw_file }}<p>
 {% endfor %}
 </div>
 <div class="btn-group">
@@ -76,6 +93,27 @@
 <button id='click_refresh_raw_files'>Click to Refresh</button>
 </form>
 </div>
+    
+<script type="application/javascript">
+    // the selector will match all input controls of type :checkbox
+    // and attach a click event handler 
+    $("input:checkbox").on('click', function() {
+      // in the handler, 'this' refers to the box clicked on
+      var $box = $(this);
+      if ($box.is(":checked")) {
+        // the name of the box is retrieved using the .attr() method
+        // as it is assumed and expected to be immutable
+        var group = "input:checkbox[name='" + $box.attr("name") + "']";
+        // the checked state of the group/box on the other hand will change
+        // and the current value is retrieved using .prop() method
+        $(group).prop("checked", false);
+        $box.prop("checked", true);
+      } else {
+        $box.prop("checked", false);
+      }
+    });
+</script>
+    
 <hr>
     
 <script>
@@ -84,50 +122,49 @@ $( "#click_refresh_raw_files" ).click(function() {
 });
 </script>
     
-<h2>mzML Files</h2><p>
-<div id="mzML_files_list">    
-{% for mzML_file in mzML_files %}
-    <input type="checkbox" name="mzML_files_array[]" />{{ mzML_file }}<p>
-{% endfor %}
-</div>
-<div class="btn-group">
-<form>
-<button id='click_refresh_mzML_files'>Click to Refresh</button>
-</form>
-</div>
-<hr>
-    
-<script>
-$( "#click_refresh_mzML_files" ).click(function() {
-  $( "#mzML_files_list" ).load(document.URL +  ' #mzML_files_list');
-});
-</script>
-    
-<h2>Available Commands</h2>
+<h2>Reports</h2>
     
 <div class="btn-group">
   <button id='preprocess'>Preprocess</button>
-  <button>Blah1</button>
-  <button>Blah2</button>
+  <button id='sample'>Sample</button>
+  <button>LC</button>
+  <button>Source</button>
+  <button>MS1</button>
+  <button>MS2</button>
+  <button>Full Report</button>
 </div>
    
 <div id="result_files_list">
     <hr>
     <h2>Results</h2>
-    <h4>Click to refresh</h4>
     <ul>
-    {% for result_name,result_url in result_files %}
-        <li><a href="{{ result_url }}">{{ result_name }}</a></li>
+    {% for method in result_files.keys() %}
+        <li><div id="{{ method }}_results">{{ method.upper() }}</div></li>
     {% endfor %}
     </ul>
-    <hr>
 </div>
+<div class="btn-group">
+<form>
+<button id='click_refresh_result_files'>Click to Refresh</button>
+</form>
+</div>
+    <hr>
+    
+<iframe id="iframe_results" src='about:blank' width="100%" height="100%" seamless></iframe>
     
 <script>
-$( "#result_files_list" ).click(function() {
-  $( this ).load(document.URL +  ' #result_files_list');
+$( "#click_refresh_result_files" ).click(function() {
+  $( "#result_files_list" ).load(document.URL +  ' #result_files_list');
 });
 </script>
+    
+{% for method in result_files.keys() %}
+    <script type="application/javascript">
+        $( "#{{ method }}_results" ).click(function() {
+            $("#iframe_results").attr('src', "{{ result_files[method] }}");
+        })
+    </script>
+{% endfor %}
     
 <script>
 makePostCall = function (url, data) { // here the data and url are not hardcoded anymore
@@ -143,7 +180,9 @@ makePostCall = function (url, data) { // here the data and url are not hardcoded
 }
     
 $( "#preprocess" ).click(function() {
-    makePostCall("/qc_preprocess", {'work_dir' : '{{ work_dir }}'})
+    var checkedValue = $('#raw_files_array:checked').val();
+
+    makePostCall("/run/preprocess/"+checkedValue, {'work_dir' : '{{ work_dir }}'})
     .then(function successCallback(response) {
        // this callback will be called asynchronously
        // when the response is available
