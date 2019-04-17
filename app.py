@@ -75,8 +75,9 @@ def index(work_dir=None):
             print("Invalid json in %s"%result_file)
             continue
         if "method" in context:
-            print(get_url(context["id"]))
-            valid_result_files[context["method"]] = get_url(context["id"])
+            valid_result_files[context["raw_file"]] = {}
+            valid_result_files[context["raw_file"]][context["method"]] = get_url(context["id"])
+    print(valid_result_files)
     return render_template('index.html',
                            page_name='QC Benchmarker',
                            project_name="qc-benchmarker",
@@ -134,6 +135,7 @@ def preprocess_task(output_dir,work_dir,raw_file):
     os.mkdir(output_dir)
     try:
         cmd = "cd %s; R -e 'QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/preprocess.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(output_dir,raw_file,output_dir,output_file)
+        print(cmd)
         subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
     except:
         print("Error while running: %s"%cmd)

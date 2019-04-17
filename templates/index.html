@@ -81,19 +81,6 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
     }
 </script>
     
-<hr>
-<h2>Raw Files</h2><p>
-<div id="raw_files_list">    
-{% for raw_file in raw_files %}
-    <input type="checkbox" value="{{ raw_file }}" id="raw_files_array" name="raw_files_array[]" />{{ raw_file }}<p>
-{% endfor %}
-</div>
-<div class="btn-group">
-<form>
-<button id='click_refresh_raw_files'>Click to Refresh</button>
-</form>
-</div>
-    
 <script type="application/javascript">
     // the selector will match all input controls of type :checkbox
     // and attach a click event handler 
@@ -115,57 +102,20 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
 </script>
     
 <hr>
-    
-<script>
-$( "#click_refresh_raw_files" ).click(function() {
-  $( "#raw_files_list" ).load(document.URL +  ' #raw_files_list');
-});
-</script>
-    
-<h2>Reports</h2>
-    
-<div class="btn-group">
-  <button id='preprocess'>Preprocess</button>
-  <button id='sample'>Sample</button>
-  <button>LC</button>
-  <button>Source</button>
-  <button>MS1</button>
-  <button>MS2</button>
-  <button>Full Report</button>
-</div>
-   
-<div id="result_files_list">
-    <hr>
-    <h2>Results</h2>
-    <ul>
-    {% for method in result_files.keys() %}
-        <li><div id="{{ method }}_results">{{ method.upper() }}</div></li>
-    {% endfor %}
-    </ul>
-</div>
-<div class="btn-group">
-<form>
-<button id='click_refresh_result_files'>Click to Refresh</button>
-</form>
-</div>
-    <hr>
-    
-<iframe id="iframe_results" src='about:blank' width="100%" height="100%" seamless></iframe>
-    
-<script>
-$( "#click_refresh_result_files" ).click(function() {
-  $( "#result_files_list" ).load(document.URL +  ' #result_files_list');
-});
-</script>
-    
-{% for method in result_files.keys() %}
-    <script type="application/javascript">
-        $( "#{{ method }}_results" ).click(function() {
-            $("#iframe_results").attr('src', "{{ result_files[method] }}");
-        })
-    </script>
+        
+{% for raw_file in raw_files %}
+    <h3>{{ raw_file }}</h3>
+    <div class="btn-group">
+      <button id='preprocess_{{ raw_file }}'>Preprocess</button>
+      <button id='sample_{{ raw_file }}'>Sample</button>
+      <button id='lc_{{ raw_file }}'>LC</button>
+      <button id='source_{{ raw_file }}'>Source</button>
+      <button id='ms1_{{ raw_file }}'>MS1</button>
+      <button id='ms2_{{ raw_file }}'>MS2</button>
+      <button id='full_report_{{ raw_file }}'>Full Report</button>
+    </div>
 {% endfor %}
-    
+   
 <script>
 makePostCall = function (url, data) { // here the data and url are not hardcoded anymore
    var json_data = JSON.stringify(data);
@@ -178,9 +128,21 @@ makePostCall = function (url, data) { // here the data and url are not hardcoded
         contentType: "application/json;charset=utf-8"
     });
 }
+</script>
     
-$( "#preprocess" ).click(function() {
-    var checkedValue = $('#raw_files_array:checked').val();
+{% for raw_file in raw_files %}
+
+{% if ( ( raw_file in result_files ) and ( 'preprocess' in result_files[raw_file]) ) %}
+<script>
+$( "#preprocess_{{ raw_file }}" ).click(function() {
+            $("#iframe_results").attr('src', "{{ result_files[raw_file]['preprocess'] }}");
+        })
+$("#preprocess_{{ raw_file }}").css('background-color','#3e8e41');
+</script>
+{% else %}
+<script>
+$( "#preprocess_{{ raw_file }}" ).click(function() {
+    var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
 
     makePostCall("/run/preprocess/"+checkedValue, {'work_dir' : '{{ work_dir }}'})
     .then(function successCallback(response) {
@@ -195,8 +157,26 @@ $( "#preprocess" ).click(function() {
         alert("Something went wrong!")
     })
 });
-    
 </script>
+{% endif %}
+
+{% endfor %}
+
+<div class="btn-group">
+<form>
+<button id='click_refresh_raw_files'>Click to Refresh</button>
+</form>
+</div>
+    
+<script>
+$( "#click_refresh_raw_files" ).click(function() {
+  $( "#raw_files_list" ).load(document.URL +  ' #raw_files_list');
+});
+</script>
+    
+<hr>
+    
+<iframe id="iframe_results" src='about:blank' width="100%" height="100%" seamless></iframe>
     
 </body>
 </html>
