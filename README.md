@@ -2,8 +2,8 @@
 
 ## Install instructions for a dev environment
 1. Install Docker
-2. docker pull python:jessie
-3. docker run -p 9999:9999 -p 7777:7777 -it python:jessie bash
+2. docker pull chambm/pwiz-skyline-i-agree-to-the-vendor-licenses
+3. docker run -p 9999:9999 -p 7777:7777 -it chambm/pwiz-skyline-i-agree-to-the-vendor-licenses
 4. git clone https://github.com/IGARDS/qc-benchmarker
 5. cd qc-benchmarker
 6. ./install_dev.sh
