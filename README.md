@@ -6,12 +6,15 @@ a few steps.
 
 1. Install Docker
 2. sudo docker pull chambm/pwiz-skyline-i-agree-to-the-vendor-licenses
-3. sudo docker run -p 443:9999 -p 80:7777 -it chambm/pwiz-skyline-i-agree-to-the-vendor-licenses
+3. sudo docker run -d -p 443:9999 -p 80:7777 -it chambm/pwiz-skyline-i-agree-to-the-vendor-licenses bash
+7. sudo docker ps # copy the container id
+4. sudo docker exec -it <container id> bash # After this you will be inside the container
+4. apt update
+4. apt install -y git
 4. git clone https://github.com/IGARDS/qc-benchmarker
 5. cd qc-benchmarker
-6. sudo ./install_dev.sh
-7. sudo docker ps # copy the container id
-8. sudo docker exec -it <container id> bash
+6. ./install_dev.sh
+7. ./install_app.sh
 9. Start whatever you want :)
 
 ## People
