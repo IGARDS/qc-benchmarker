@@ -55,9 +55,13 @@ def get_url(task_id):
     try:
         file = preprocess_task.AsyncResult(task_id).get(timeout=1.0)
     except:
-        return "RUNNING"
+        return url_for('running')
     
     return url_for('view_results',path=urllib.parse.quote(file, safe=''))
+
+@app.route('/running')
+def running():
+    return render_template('running.html') 
 
 @app.route('/index/')
 @app.route('/index/<work_dir>')
@@ -68,28 +72,33 @@ def index(work_dir=None):
     raw_files = [file.split('/')[-1].replace(".raw","") for file in glob_ctime_sort("%s%s/*.raw"%(output_dir,work_dir))]
     result_files = glob_ctime_sort("%s%s/*.result"%(output_dir,work_dir))
     valid_result_files = {}
+    id_result_files = {}
     for i,result_file in enumerate(result_files):
         try:
             context = json.loads(open(result_file).read())
+            if context["raw_file"] not in valid_result_files:
+                valid_result_files[context["raw_file"]] = {}
+                id_result_files[context["raw_file"]] = {}
         except:
             print("Invalid json in %s"%result_file)
             continue
         if "method" in context:
-            valid_result_files[context["raw_file"]] = {}
             valid_result_files[context["raw_file"]][context["method"]] = get_url(context["id"])
+            id_result_files[context["raw_file"]][context["method"]] = context["id"]
     print(valid_result_files)
     return render_template('index.html',
                            page_name='QC Benchmarker',
                            project_name="qc-benchmarker",
                            work_dir=work_dir,
                            raw_files=raw_files,
-                           result_files=valid_result_files
+                           result_files=valid_result_files,
+                           id_result_files=id_result_files
                           )
 
 @app.route('/upload', methods=['POST'])
 def upload():
     file = request.files['file']
-    work_dir = request.form["work_dir"]
+    work_dir = "%s%s"%(output_dir,request.form["work_dir"])
 
     save_path = os.path.join(work_dir, secure_filename(file.filename))
     current_chunk = int(request.form['dzchunkindex'])
@@ -134,7 +143,7 @@ def preprocess_task(output_dir,work_dir,raw_file):
     output_dir = "%s%s/%s"%(output_dir,work_dir,preprocess_task.request.id)
     os.mkdir(output_dir)
     try:
-        cmd = "cd %s; R -e 'QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/preprocess.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(output_dir,raw_file,output_dir,output_file)
+        cmd = "cd %s; R -e 'OUTPUT_DIR=\"%s\"; QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/preprocess.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(output_dir,output_dir,raw_file,output_dir,output_file)
         print(cmd)
         subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
     except:
@@ -143,6 +152,102 @@ def preprocess_task(output_dir,work_dir,raw_file):
     print(file)
     return file
 
+@celery.task(name="tasks.sample")
+def sample_task(output_dir,work_dir,raw_file,task_id):
+    output_file = raw_file + ".html"
+    mzML_output_dir = "%s%s/%s"%(output_dir,work_dir,task_id)
+    output_dir = "%s%s/%s"%(output_dir,work_dir,sample_task.request.id)
+    os.mkdir(output_dir)
+    try:
+        cmd = "cd %s; R -e 'MZML_DIR=\"%s\"; OUTPUT_DIR=\"%s\"; QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/sample.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(output_dir,mzML_output_dir,output_dir,raw_file,output_dir,output_file)
+        print(cmd)
+        subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
+    except:
+        print("Error while running: %s"%cmd)
+    file = "%s/%s"%(output_dir,output_file)
+    print(file)
+    return file
+                      
+@celery.task(name="tasks.lc")
+def lc_task(output_dir,work_dir,raw_file,task_id):
+    output_file = raw_file + ".html"
+    mzML_output_dir = "%s%s/%s"%(output_dir,work_dir,task_id)
+    output_dir = "%s%s/%s"%(output_dir,work_dir,sample_task.request.id)
+    os.mkdir(output_dir)
+    try:
+        cmd = "cd %s; R -e 'MZML_DIR=\"%s\"; OUTPUT_DIR=\"%s\"; QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/lc.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(output_dir,mzML_output_dir,output_dir,raw_file,output_dir,output_file)
+        print(cmd)
+        subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
+    except:
+        print("Error while running: %s"%cmd)
+    file = "%s/%s"%(output_dir,output_file)
+    print(file)
+    return file
+                      
+@celery.task(name="tasks.source")
+def source_task(output_dir,work_dir,raw_file,task_id):
+    output_file = raw_file + ".html"
+    mzML_output_dir = "%s%s/%s"%(output_dir,work_dir,task_id)
+    output_dir = "%s%s/%s"%(output_dir,work_dir,source_task.request.id)
+    os.mkdir(output_dir)
+    try:
+        cmd = "cd %s; R -e 'MZML_DIR=\"%s\"; OUTPUT_DIR=\"%s\"; QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/source.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(output_dir,mzML_output_dir,output_dir,raw_file,output_dir,output_file)
+        print(cmd)
+        subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
+    except:
+        print("Error while running: %s"%cmd)
+    file = "%s/%s"%(output_dir,output_file)
+    print(file)
+    return file
+                      
+@celery.task(name="tasks.ms1")
+def ms1_task(output_dir,work_dir,raw_file,task_id):
+    output_file = raw_file + ".html"
+    mzML_output_dir = "%s%s/%s"%(output_dir,work_dir,task_id)
+    output_dir = "%s%s/%s"%(output_dir,work_dir,ms1_task.request.id)
+    os.mkdir(output_dir)
+    try:
+        cmd = "cd %s; R -e 'MZML_DIR=\"%s\"; OUTPUT_DIR=\"%s\"; QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/ms1.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(output_dir,mzML_output_dir,output_dir,raw_file,output_dir,output_file)
+        print(cmd)
+        subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
+    except:
+        print("Error while running: %s"%cmd)
+    file = "%s/%s"%(output_dir,output_file)
+    print(file)
+    return file
+
+@celery.task(name="tasks.ms2")
+def ms2_task(output_dir,work_dir,raw_file,task_id):
+    output_file = raw_file + ".html"
+    mzML_output_dir = "%s%s/%s"%(output_dir,work_dir,task_id)
+    output_dir = "%s%s/%s"%(output_dir,work_dir,ms2_task.request.id)
+    os.mkdir(output_dir)
+    try:
+        cmd = "cd %s; R -e 'MZML_DIR=\"%s\"; OUTPUT_DIR=\"%s\"; QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/ms2.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(output_dir,mzML_output_dir,output_dir,raw_file,output_dir,output_file)
+        print(cmd)
+        subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
+    except:
+        print("Error while running: %s"%cmd)
+    file = "%s/%s"%(output_dir,output_file)
+    print(file)
+    return file
+                      
+@celery.task(name="tasks.full_report")
+def full_report_task(output_dir,work_dir,raw_file,task_id):
+    output_file = raw_file + ".html"
+    mzML_output_dir = "%s%s/%s"%(output_dir,work_dir,task_id)
+    output_dir = "%s%s/%s"%(output_dir,work_dir,full_report_task.request.id)
+    os.mkdir(output_dir)
+    try:
+        cmd = "cd %s; R -e 'MZML_DIR=\"%s\"; OUTPUT_DIR=\"%s\"; QUERY=\"%s\"; rmarkdown::render(\"/data/qc-benchmarker/full_report.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(output_dir,mzML_output_dir,output_dir,raw_file,output_dir,output_file)
+        print(cmd)
+        subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
+    except:
+        print("Error while running: %s"%cmd)
+    file = "%s/%s"%(output_dir,output_file)
+    print(file)
+    return file
+                      
 @app.route("/run/<method>/<raw_file>", methods=['POST'])
 def run(method,raw_file):
     content = request.json
@@ -150,6 +255,24 @@ def run(method,raw_file):
     #raw_file = output_dir + work_dir + "/" + raw_file+".raw"
     if method == "preprocess":
         res = preprocess_task.delay(output_dir,work_dir,raw_file)
+    elif method == "sample":
+        task_id = content["id"]
+        res = sample_task.delay(output_dir,work_dir,raw_file,task_id) 
+    elif method == "lc":
+        task_id = content["id"]
+        res = lc_task.delay(output_dir,work_dir,raw_file,task_id)     
+    elif method == "source":
+        task_id = content["id"]
+        res = source_task.delay(output_dir,work_dir,raw_file,task_id) 
+    elif method == "ms1":
+        task_id = content["id"]
+        res = ms1_task.delay(output_dir,work_dir,raw_file,task_id) 
+    elif method == "ms2":
+        task_id = content["id"]
+        res = ms2_task.delay(output_dir,work_dir,raw_file,task_id) 
+    elif method == "full_report":
+        task_id = content["id"]
+        res = full_report_task.delay(output_dir,work_dir,raw_file,task_id) 
     context = {"id": res.task_id, "method": method, "raw_file": raw_file}
     open("%s%s/%s.result"%(output_dir,work_dir,res.task_id),"w").write(json.dumps(context, indent=4))
     return jsonify(context)

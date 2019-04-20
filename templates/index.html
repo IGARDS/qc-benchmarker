@@ -20,6 +20,10 @@
     <title>QC Benchmarker</title>
     
     <style>
+        #parent {
+            text-align:left;
+            max-width:800px;
+        }
         .btn-group button {
           background-color: #4CAF50; /* Green background */
           border: 1px solid green; /* Green border */
@@ -50,11 +54,16 @@
             border: 0px none transparent;
             padding: 0px;
             overflow: hidden;
+            float: left;
+            margin:0 auto;            
         }
     </style>
 </head>
 <body>
-    
+
+<center>
+<div id="parent">
+
 Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}">TBA</a><br><br>
     
 <script type="application/javascript">
@@ -77,7 +86,7 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
         forceChunking: true,
         url: '/upload',
         maxFilesize: 5025, // megabytes
-        chunkSize: 10000000 // bytes
+        chunkSize: 1000000 // bytes
     }
 </script>
     
@@ -159,7 +168,175 @@ $( "#preprocess_{{ raw_file }}" ).click(function() {
 });
 </script>
 {% endif %}
+    
+{% if ( ( raw_file in result_files ) and ( 'sample' in result_files[raw_file]) ) %}
+<script>
+$( "#sample_{{ raw_file }}" ).click(function() {
+            $("#iframe_results").attr('src', "{{ result_files[raw_file]['sample'] }}");
+        })
+$("#sample_{{ raw_file }}").css('background-color','#3e8e41');
+</script>
+{% elif ( ( raw_file in result_files ) and ( 'preprocess' in result_files[raw_file]) ) %}
+<script>
+$( "#sample_{{ raw_file }}" ).click(function() {
+    var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
 
+    makePostCall("/run/sample/"+checkedValue, {'work_dir' : '{{ work_dir }}', 'id': '{{ id_result_files[raw_file]["preprocess"] }}'})
+    .then(function successCallback(response) {
+       // this callback will be called asynchronously
+       // when the response is available
+
+        console.log(response)
+
+    }, function errorCallback(response) {
+       // called asynchronously if an error occurs
+       // or server returns response with an error status.
+        alert("Something went wrong!")
+    })
+});
+</script>
+{% endif %}
+
+{% if ( ( raw_file in result_files ) and ( 'lc' in result_files[raw_file]) ) %}
+<script>
+$( "#lc_{{ raw_file }}" ).click(function() {
+            $("#iframe_results").attr('src', "{{ result_files[raw_file]['lc'] }}");
+        })
+$("#lc_{{ raw_file }}").css('background-color','#3e8e41');
+</script>
+{% elif ( ( raw_file in result_files ) and ( 'preprocess' in result_files[raw_file]) ) %}
+<script>
+$( "#lc_{{ raw_file }}" ).click(function() {
+    var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
+
+    makePostCall("/run/lc/"+checkedValue, {'work_dir' : '{{ work_dir }}', 'id': '{{ id_result_files[raw_file]["preprocess"] }}'})
+    .then(function successCallback(response) {
+       // this callback will be called asynchronously
+       // when the response is available
+
+        console.log(response)
+
+    }, function errorCallback(response) {
+       // called asynchronously if an error occurs
+       // or server returns response with an error status.
+        alert("Something went wrong!")
+    })
+});
+</script>
+{% endif %}
+
+{% if ( ( raw_file in result_files ) and ( 'source' in result_files[raw_file]) ) %}
+<script>
+$( "#source_{{ raw_file }}" ).click(function() {
+            $("#iframe_results").attr('src', "{{ result_files[raw_file]['source'] }}");
+        })
+$("#source_{{ raw_file }}").css('background-color','#3e8e41');
+</script>
+{% elif ( ( raw_file in result_files ) and ( 'preprocess' in result_files[raw_file]) ) %}
+<script>
+$( "#source_{{ raw_file }}" ).click(function() {
+    var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
+
+    makePostCall("/run/source/"+checkedValue, {'work_dir' : '{{ work_dir }}', 'id': '{{ id_result_files[raw_file]["preprocess"] }}'})
+    .then(function successCallback(response) {
+       // this callback will be called asynchronously
+       // when the response is available
+
+        console.log(response)
+
+    }, function errorCallback(response) {
+       // called asynchronously if an error occurs
+       // or server returns response with an error status.
+        alert("Something went wrong!")
+    })
+});
+</script>
+{% endif %}
+
+{% if ( ( raw_file in result_files ) and ( 'ms1' in result_files[raw_file]) ) %}
+<script>
+$( "#ms1_{{ raw_file }}" ).click(function() {
+            $("#iframe_results").attr('src', "{{ result_files[raw_file]['ms1'] }}");
+        })
+$("#ms1_{{ raw_file }}").css('background-color','#3e8e41');
+</script>
+{% elif ( ( raw_file in result_files ) and ( 'preprocess' in result_files[raw_file]) ) %}
+<script>
+$( "#ms1_{{ raw_file }}" ).click(function() {
+    var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
+
+    makePostCall("/run/ms1/"+checkedValue, {'work_dir' : '{{ work_dir }}', 'id': '{{ id_result_files[raw_file]["preprocess"] }}'})
+    .then(function successCallback(response) {
+       // this callback will be called asynchronously
+       // when the response is available
+
+        console.log(response)
+
+    }, function errorCallback(response) {
+       // called asynchronously if an error occurs
+       // or server returns response with an error status.
+        alert("Something went wrong!")
+    })
+});
+</script>
+{% endif %}
+
+{% if ( ( raw_file in result_files ) and ( 'ms2' in result_files[raw_file]) ) %}
+<script>
+$( "#ms2_{{ raw_file }}" ).click(function() {
+            $("#iframe_results").attr('src', "{{ result_files[raw_file]['ms2'] }}");
+        })
+$("#ms2_{{ raw_file }}").css('background-color','#3e8e41');
+</script>
+{% elif ( ( raw_file in result_files ) and ( 'preprocess' in result_files[raw_file]) ) %}
+<script>
+$( "#ms2_{{ raw_file }}" ).click(function() {
+    var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
+
+    makePostCall("/run/ms2/"+checkedValue, {'work_dir' : '{{ work_dir }}', 'id': '{{ id_result_files[raw_file]["preprocess"] }}'})
+    .then(function successCallback(response) {
+       // this callback will be called asynchronously
+       // when the response is available
+
+        console.log(response)
+
+    }, function errorCallback(response) {
+       // called asynchronously if an error occurs
+       // or server returns response with an error status.
+        alert("Something went wrong!")
+    })
+});
+</script>
+{% endif %}
+
+{% if ( ( raw_file in result_files ) and ( 'full_report' in result_files[raw_file]) ) %}
+<script>
+$( "#full_report_{{ raw_file }}" ).click(function() {
+            $("#iframe_results").attr('src', "{{ result_files[raw_file]['full_report'] }}");
+        })
+$("#full_report_{{ raw_file }}").css('background-color','#3e8e41');
+</script>
+{% elif ( ( raw_file in result_files ) and ( 'preprocess' in result_files[raw_file]) ) %}
+<script>
+$( "#full_report_{{ raw_file }}" ).click(function() {
+    var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
+
+    makePostCall("/run/full_report/"+checkedValue, {'work_dir' : '{{ work_dir }}', 'id': '{{ id_result_files[raw_file]["preprocess"] }}'})
+    .then(function successCallback(response) {
+       // this callback will be called asynchronously
+       // when the response is available
+
+        console.log(response)
+
+    }, function errorCallback(response) {
+       // called asynchronously if an error occurs
+       // or server returns response with an error status.
+        alert("Something went wrong!")
+    })
+});
+</script>
+{% endif %}
+    
 {% endfor %}
 
 <div class="btn-group">
@@ -177,6 +354,8 @@ $( "#click_refresh_raw_files" ).click(function() {
 <hr>
     
 <iframe id="iframe_results" src='about:blank' width="100%" height="100%" seamless></iframe>
-    
+
+</div>
+</center>
 </body>
 </html>

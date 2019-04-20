@@ -1,0 +1,52 @@
+---
+title: "MS2 QC Pipeline"
+author: "Magnus Palmblad. Modified by Paul Anderson"
+date: "October 25, 2018"
+output:
+  html_document: default
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. This Markdown contains all steps for a rich QC analysis from a HeLa cell digest LC-MS/MS dataset based on the [Trans-Proteomic Pipeline](http://tools.proteomecenter.org/wiki/index.php?title=Software:TPP).
+
+
+```{r Global Options, include=TRUE}
+knitr::opts_chunk$set(fig.width=5, fig.height=5, fig.align='center', warning=FALSE, message=FALSE, error=TRUE)
+options(tinytex.verbose = TRUE)
+
+```
+
+
+#### 1. Load R packages and specify the search parameters and sequence database
+
+First we load R packages, specify the parameters and sequence database:
+
+```{r Setup}
+library(mzR)
+library(scales)
+
+# Commented out lines must be set before render call
+#QUERY <- '2018-10-18_HeLa_OTOT'                             # query for QC
+#OUTPUT_DIR <- '/tmp/lkjdflkj'
+#MZML_DIR
+
+# The following are hard coded for now
+REFERENCE <- '/data/2018-10-15_HeLa_OTOT'                    # reference (could be local)
+AMOUNT_INJECTED <- 200                                       # ng HeLa injected (reference)
+SPECTRAST_LIBRARY <- '/data/HeLa.splib'                      # HeLa library
+FASTA_FILE <- '/data/up000005640.fasta'                      # sequence database
+mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')
+cat('mzML file is',mzml_file)
+
+
+```
+
+### 3. Look up instrument manufacturer and model from query mzML file
+
+Here we read in instrument metadata from the mzML file using the [mzR](http://bioconductor.org/packages/release/bioc/html/mzR.html) package. 
+
+```{r Extract instrumentInfo}
+query_file <- openMSfile(mzml_file)
+make <- instrumentInfo(query_file)$manufacturer
+model <- instrumentInfo(query_file)$model
+cat('Query file is', make, model)   # look up make and model of file for QC    
+```
