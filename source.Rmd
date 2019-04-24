@@ -1,12 +1,13 @@
 ---
-title: "Source QC Pipeline"
-author: "Magnus Palmblad. Modified by Paul Anderson"
-date: "October 25, 2018"
+title: "Source QC"
+date version: "April 24, 2019"
 output:
   html_document: default
 ---
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. This Markdown contains all steps for a rich QC analysis from a HeLa cell digest LC-MS/MS dataset based on the [Trans-Proteomic Pipeline](http://tools.proteomecenter.org/wiki/index.php?title=Software:TPP).
+This sub-report contains metrics related to the performance of the source. This includes metrics such as TIC Signal, Max/median TIC values, peak capacity (function of gradient length, PSMs and the FWHM of PSMs), MS1 dynamic range, and an evaluation of peak instability (or sputtering).
+
+The reference used in the following is a typical run of 200 ng HeLa digest against the given LC method.
 
 
 ```{r Global Options, include=TRUE}

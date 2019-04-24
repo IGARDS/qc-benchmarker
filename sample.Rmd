@@ -1,12 +1,13 @@
 ---
-title: "Sample QC Pipeline"
-author: "Magnus Palmblad. Modified by Paul Anderson"
-date: "October 25, 2018"
+title: "Sample QC"
+date version: "April 24, 2019"
 output:
   html_document: default
 ---
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. This Markdown contains all steps for a rich QC analysis from a HeLa cell digest LC-MS/MS dataset based on the [Trans-Proteomic Pipeline](http://tools.proteomecenter.org/wiki/index.php?title=Software:TPP).
+This sub-report contains metrics related to QC sample integrity. The QC Benchmarker automatically detects whether the sample was HeLa (Thermo), yeast (Promega) or *E. coli* (Waters) digest. Metrics include estimated sample loading, % spectra matched to sample, and +1 charge states over the gradient. Future work will include determining matches to cRAP/PRIDE contaminants.
+
+
 
 
 ```{r Global Options, include=TRUE}

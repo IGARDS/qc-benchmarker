@@ -1,12 +1,13 @@
 ---
-title: "LC QC Pipeline"
-author: "Magnus Palmblad. Modified by Paul Anderson"
-date: "October 25, 2018"
+title: "LC QC"
+date version: "April 24, 2019"
 output:
   html_document: default
 ---
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. This Markdown contains all steps for a rich QC analysis from a HeLa cell digest LC-MS/MS dataset based on the [Trans-Proteomic Pipeline](http://tools.proteomecenter.org/wiki/index.php?title=Software:TPP).
+This sub-report contains metrics related to the performance of LC system components. Metrics include estimated pH of mobile phases, column heater,  shape of gradient, peak shape statistics (such as FWHM for 25, 50 and 75% quartiles and base peak width). Future work will include determining % TIC that is polysiloxane or detergents in order to evaluate column health and system contamination.
+
+
 
 
 ```{r Global Options, include=TRUE}
