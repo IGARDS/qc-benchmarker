@@ -1,6 +1,6 @@
 ---
 title: "MS1 QC Report"
-date version: "April 24, 2019"
+date version: "April 26, 2019"
 output:
   html_document: default
 ---
@@ -19,10 +19,13 @@ options(tinytex.verbose = TRUE)
 ```{r Setup, echo=FALSE}
 library(mzR)
 library(scales)
+library(XML)
+library(pepXMLTab)
+library(ggplot2)
 
 # Commented out lines must be set before render call
 QUERY <- '2018-10-18_HeLa_OTOT'                             # query for QC
-# OUTPUT_DIR <- '/tmp/lkjdflkj'
+#OUTPUT_DIR <- '/tmp/lkjdflkj'
 MZML_DIR <- 'C:/TPP/data/Ben'
 
 # The following are hard coded for now
