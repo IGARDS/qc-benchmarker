@@ -41,7 +41,7 @@ def make_celery(app):
 
 celery = make_celery(app)
 
-output_dir = "/tmp"
+output_dir = "/data/files"
 if output_dir[-1] != "/":
     output_dir = output_dir+"/"
 
