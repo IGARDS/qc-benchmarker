@@ -33,6 +33,15 @@
           float: left; /* Float the buttons side by side */
         }
 
+        .btn-group2 button {
+          background-color: #4CAF50; /* Green background */
+          border: 1px solid green; /* Green border */
+          color: white; /* White text */
+          padding: 10px 24px; /* Some padding */
+          cursor: pointer; /* Pointer/hand icon */
+          float: center; /* Float the buttons side by side */
+        }
+
         /* Clear floats (clearfix hack) */
         .btn-group:after {
           content: "";
@@ -63,12 +72,24 @@
 
 <center>
 <div id="parent">
+<center>
 
+<div class="btn-group2">
+  <button id='documentation' onclick="window.location.href = '/documentation'">Documentation</button>
+  <button id='about' onclick="window.location.href = '/about'">About</button>
+  <button id='disclaimer' onclick="window.location.href = '/disclaimer'">Disclaimer</button>
+  <button id='privacy_concerns' onclick="window.location.href = '/privacy'">Privacy Concerns</button>
+</div>
+
+</center>
+    
+<p>
 Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}">TBA</a><br><br>
     
 <script type="application/javascript">
     if (!document.URL.includes("{{ work_dir }}")) {
         document.getElementById('save_url').innerHTML = document.URL +"{{ work_dir }}" 
+        window.location.replace(document.getElementById('save_url').innerHTML);
     } else {
         document.getElementById('save_url').innerHTML = document.URL
     }
@@ -81,6 +102,7 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
 
 <script type="application/javascript">
     Dropzone.options.dropper = {
+        dictDefaultMessage: 'Drop raw file here<p>By uploading a file you acknowledge reading the disclaimer',
         paramName: 'file',
         chunking: true,
         forceChunking: true,
@@ -88,26 +110,6 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
         maxFilesize: 5025, // megabytes
         chunkSize: 1000000 // bytes
     }
-</script>
-    
-<script type="application/javascript">
-    // the selector will match all input controls of type :checkbox
-    // and attach a click event handler 
-    $("input:checkbox").on('click', function() {
-      // in the handler, 'this' refers to the box clicked on
-      var $box = $(this);
-      if ($box.is(":checked")) {
-        // the name of the box is retrieved using the .attr() method
-        // as it is assumed and expected to be immutable
-        var group = "input:checkbox[name='" + $box.attr("name") + "']";
-        // the checked state of the group/box on the other hand will change
-        // and the current value is retrieved using .prop() method
-        $(group).prop("checked", false);
-        $box.prop("checked", true);
-      } else {
-        $box.prop("checked", false);
-      }
-    });
 </script>
     
 <hr>
@@ -347,7 +349,11 @@ $( "#full_report_{{ raw_file }}" ).click(function() {
     
 <script>
 $( "#click_refresh_raw_files" ).click(function() {
-  $( "#raw_files_list" ).load(document.URL +  ' #raw_files_list');
+  if (document.URL.includes("{{ work_dir }}")) {
+      $( "#raw_files_list" ).load(document.URL +  ' #raw_files_list');
+  } else {
+      $( "#raw_files_list" ).load(document.URL+"{{ work_dir }}" +  ' #raw_files_list');
+  }
 });
 </script>
     

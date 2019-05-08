@@ -63,6 +63,22 @@ def get_url(task_id):
 def running():
     return render_template('running.html') 
 
+@app.route('/about')
+def about():
+    return render_template('about.html') 
+
+@app.route('/documentation')
+def documentation():
+    return render_template('documentation.html') 
+
+@app.route('/disclaimer')
+def disclaimer():
+    return render_template('disclaimer.html') 
+
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html') 
+
 @app.route('/index/')
 @app.route('/index/<work_dir>')
 def index(work_dir=None):
