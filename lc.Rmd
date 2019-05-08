@@ -1,6 +1,6 @@
 ---
 title: "LC QC Report"
-date version: "May 7, 2019"
+date version: "May 8, 2019"
 output:
   html_document: default
 ---
@@ -45,25 +45,28 @@ mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')
 
 ```{r Estimate peak capacity, eval=TRUE, echo=FALSE}
 query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
-query_TIC <- chromatogram(query, aggregationFun = "max")
+query_BPC <- chromatogram(query, aggregationFun = "max")
 
-# query_TIC <- chromatogram(query, mz = c(600,610), aggregationFun = "max") # look in smaller windows for complex samples?
+# query_BPC <- chromatogram(query, mz = c(600,610), aggregationFun = "max") # smaller m/z windows?
 
-x <- as.numeric(query_TIC[1,1]@rtime)
-y <- as.numeric(query_TIC[1,1]@intensity)
-mean_diff_between_MS1_times <- mean(diff(x))
+x <- as.numeric(query_BPC[1,1]@rtime)
+y <- as.numeric(query_BPC[1,1]@intensity)
 
-fy <- Re(fft(fft(y)*Conj(fft(y)), inverse = TRUE))
+x2 <- seq(round(min(x)),round(max(x)),0.1)
+y2 <- rep(0,length(x2))
 
-# plot(fy[1:100], type="l")
-# plot(mean_diff_between_MS1_times*(1:100), diff((fy[1:101]))/diff(x[1:101]-x[1]), type="l")
-# plot(mean_diff_between_MS1_times*(1:100), fy[1:100], type="l")
+for(i in 1:length(y2)) {
+  j <- which.min(abs(x2[i]-x))
+  y2[i] <- y[j]
+}
+  
+fy2 <- Re(fft(fft(y2)*Conj(fft(y2)), inverse = TRUE))
 
-max_fy <- max(fy)
-min_fy_w <- min(fy[1:100])
-for(i in 1:100) {if(fy[i]<(min_fy_w+(max_fy-min_fy_w)/2)) break}
-peak_width <- 2*i*mean_diff_between_MS1_times
-cat('Mean peak width =', signif(peak_width, digits=4), "seconds")
+max_fy2 <- max(fy2)
+min_fy2_w <- min(fy2[1:1000])
+for(i in 1:1000) {if(fy2[i]<(min_fy2_w+(max_fy2-min_fy2_w)/2)) break}
+peak_width <- 1.412517*i*0.1 # FWHM = 1.412517 * (lag at autocorrelation half maximum for gaussian)
+cat('Mean peak width (FWHM equivalent) =', signif(peak_width, digits=4), "seconds")
 
 gradient_length <- 120*60 # in seconds
 cat('Theor. peak capacity =', signif(gradient_length/peak_width, digits=4))
