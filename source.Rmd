@@ -3,10 +3,10 @@ title: "Source QC Report"
 output:
   html_document: default
   pdf_document: default
-date version: May 1, 2019
+date version: May 6, 2019
 ---
 
-[//]: # (This sub-report contains metrics related to the performance of the source. This includes metrics such as TIC Signal, max/median TIC values, peak capacity (function of gradient length, PSMs and the FWHM of PSMs), MS1 dynamic range, and an evaluation of peak instability (or sputtering).)
+[//]: # (This sub-report contains metrics related to the performance of the source. This includes metrics such as smoothness of the MS1 TIC reflecting source sputtering.
 
 ```{r Global Options, echo=FALSE}
 knitr::opts_chunk$set(fig.width=5, fig.height=5, fig.align='center', warning=FALSE, message=FALSE, error=TRUE)
@@ -18,6 +18,7 @@ options(tinytex.verbose = TRUE)
 
 ```{r Setup, echo=FALSE}
 library(mzR)
+library(MSnbase)
 library(scales)
 library(XML)
 library(pepXMLTab)
@@ -43,25 +44,33 @@ mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')
 [//]: # (Here we read in instrument metadata from the mzML file using the mzR package) 
 
 ```{r Compare signal stability, echo=FALSE}
-# reference_file <- openMSfile(paste(REFERENCE, '.mzML', sep=''))
-# query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
+query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
+query_TIC <- chromatogram(query, aggregationFun = "sum")
 
-# cat <QUERY>.mzML | grep MS:1000285 | awk '{gsub("value=\"",""); gsub("\"/>",""); print $7}' > QUERY_TIC.txt
-# cat <REFERENCE>.mzML | grep MS:1000285 | awk '{gsub("value=\"",""); gsub("\"/>",""); print $7}' > REFERENCE_TIC.txt
+reference <- readMSData(paste(REFERENCE, '.mzML', sep=''), msLevel = 1)
+reference_TIC <- chromatogram(reference, aggregationFun = "sum")
 
-query_TIC<-read.csv('QUERY_TIC.txt')
-reference_TIC<-read.csv('REFERENCE_TIC.txt')
+# x <- as.numeric(query_TIC[1,1]@intensity)
+# cors <- rep(0,10); j=0;
+# for (i in seq(0,1,0.1)) {
+#   j <- j+1; x <- as.numeric(query_TIC[1,1]@intensity); x <- x*rnorm(length(x), mean=1, sd=i); query_cor # <- cor(x[-length(x)],x[-1]); cors[j] <- query_cor
+# }
+# plot(seq(0,1,0.1),cors, xlab='multiplicative noise s.d.', ylab='signal stability (cor)')  
 
-# query_TIC <- query_TIC*rnorm(dim(query_TIC)[1], mean=1, sd=1)
+# x <- as.numeric(query_TIC[1,1]@intensity)
+# cors <- rep(0,10); j=0;
+# for (i in seq(0,1E8,1E7)) {
+#   j <- j+1; x <- as.numeric(query_TIC[1,1]@intensity); x <- x+rnorm(length(x), mean=0, sd=i); query_cor # <- cor(x[-length(x)],x[-1]); cors[j] <- query_cor
+# }
+# plot(seq(0,1E8,1E7),cors, xlab='additive noise s.d.', ylab='signal stability (cor)')  
 
-x <- query_TIC[,1]
-# x <- x*rnorm(length(x), mean=1, sd=0.2)
-# plot(1:length(x),x,type='l')
+x <- as.numeric(query_TIC[1,1]@intensity)
 query_cor <- cor(x[-length(x)],x[-1])
-x <- reference_TIC[,1]
+x <- as.numeric(reference_TIC[1,1]@intensity)
 reference_cor <- cor(x[-length(x)],x[-1])
 
 barplot(c(reference_cor, query_cor), names.arg=c('reference','query'), col=c("green","blue"),
-        ylab='signal stability', ylim=c(0,1))
+        ylab='signal stability (lag-1 autocorrelation)', ylim=c(0,1))
+median_TIC <- median(as.numeric(query_TIC[1,1]@intensity))
 ```
 \begin{center}Figure 1: Signal stability of reference (green) and query (blue).\end{center}

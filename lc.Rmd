@@ -1,6 +1,6 @@
 ---
 title: "LC QC Report"
-date version: "April 30, 2019"
+date version: "May 7, 2019"
 output:
   html_document: default
 ---
@@ -18,6 +18,7 @@ options(tinytex.verbose = TRUE)
 
 ```{r Setup, echo=FALSE}
 library(mzR)
+library(MSnbase)
 library(scales)
 library(XML)
 library(pepXMLTab)
@@ -37,30 +38,131 @@ mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')
 # cat('mzML file is',mzml_file)
 ```
 
-[//]: # (1. Look at retention coefficients)
 
-[//]: # (Here we train a linear model (Palmblad *et al*., 2002) for predicting retention times, and compare the amino acid coefficients of the query model with those from the reference model. This will reveal changes in mobile phase composition, such as ionic strength or pH)
+[//]: # (1. Estimate peak capacity)
 
-```{r Compare retention coefficients, eval=TRUE, echo=FALSE}
-reference_coeffs <- system(paste('rt -i ', tolower(REFERENCE), '.pep.xml -f tab',
-                               sep=''), intern=TRUE)
-aa_olc <- gsub('\\t.+$', '', reference_coeffs)
-reference_coeffs <- as.numeric(gsub('.\\t', '', reference_coeffs))
+[//]: # (Calculate peak capacity as defined in QuiC or ID-free?)
 
-query_coeffs <- system(paste('rt -i ', tolower(QUERY), '.pep.xml -f tab',
-                           sep=''), intern=TRUE) 
-query_coeffs <- as.numeric(gsub('.\\t', '', query_coeffs))
+```{r Estimate peak capacity, eval=TRUE, echo=FALSE}
+query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
+query_TIC <- chromatogram(query, aggregationFun = "max")
 
-aa_colors<-c('orange', 'blue', 'magenta', 'red', 'green', 'red', 'magenta', 'orange',
-             'blue', 'green', 'green', 'blue', 'green', 'green', 'green', 'orange', 
-             'orange', 'green', 'green', 'green', 'yellow', 'yellow', 'yellow', 
-             'yellow', 'black')
-limits <- c(min(reference_coeffs[1:20], query_coeffs[1:20]), max(reference_coeffs[1:20], 
-                                                                 query_coeffs[1:20]))
-plot(reference_coeffs[1:20], query_coeffs[1:20], pch=19, cex=2.5, 
-     col=alpha(aa_colors, 0.6), xlab='reference retention coefficient (min)', 
-     ylab='query retention coefficient (min)', xlim=limits, ylim=limits)
-text(reference_coeffs[1:20], query_coeffs[1:20]+0.0047*(max(query_coeffs[1:20])-
-     min(query_coeffs[1:20])), aa_olc[1:20], col='white', font=2, cex=0.8)
+# query_TIC <- chromatogram(query, mz = c(600,610), aggregationFun = "max") # look in smaller windows for complex samples?
+
+x <- as.numeric(query_TIC[1,1]@rtime)
+y <- as.numeric(query_TIC[1,1]@intensity)
+mean_diff_between_MS1_times <- mean(diff(x))
+
+fy <- Re(fft(fft(y)*Conj(fft(y)), inverse = TRUE))
+
+# plot(fy[1:100], type="l")
+# plot(mean_diff_between_MS1_times*(1:100), diff((fy[1:101]))/diff(x[1:101]-x[1]), type="l")
+# plot(mean_diff_between_MS1_times*(1:100), fy[1:100], type="l")
+
+max_fy <- max(fy)
+min_fy_w <- min(fy[1:100])
+for(i in 1:100) {if(fy[i]<(min_fy_w+(max_fy-min_fy_w)/2)) break}
+peak_width <- 2*i*mean_diff_between_MS1_times
+cat('Mean peak width =', signif(peak_width, digits=4), "seconds")
+
+gradient_length <- 120*60 # in seconds
+cat('Theor. peak capacity =', signif(gradient_length/peak_width, digits=4))
 ```
-\begin{center}Figure 3: Retention time coefficients for query compared with reference. The closer to the 45-degree diagonal the better. Deviation in basic and/or acidic residues suggests different pH.\end{center}
+\begin{center}Figure 1: Peak capacity.\end{center}
+
+[//]: # (2. Look at retention coefficients)
+
+[//]: # (Here we train a linear model (Palmblad *et al*., 2002) for predicting retention times, and compare the amino acid coefficients of the query model with those from the reference model. This will reveal changes in mobile phase composition, such as ionic strength or pH. The training is here done with R packages.)
+
+```{r Compare retention coefficients R-only, eval=TRUE, echo=FALSE}
+peptides <-c(); RTs <- c()
+psms <- xmlToList(paste(tolower(QUERY), '.interact.pep.xml', sep=''))
+for (i in seq(5,length(psms$msms_run_summary)-1)) {
+    peptides <- c(peptides,as.character(psms$msms_run_summary[i]$spectrum_query$search_result$search_hit$.attrs['peptide']))
+    RTs <- c(RTs,as.numeric(psms$msms_run_summary[i]$spectrum_query$.attrs['retention_time_sec']))
+}
+meanRT <- mean(RTs)
+sdRT <- sd(RTs)
+ZRTs <- (RTs - meanRT)/sdRT
+ 
+nA<-c(); nR<-c(); nN<-c(); nD<-c(); nC<-c(); nE<-c(); nQ<-c(); nG<-c(); nH<-c(); nI<-c();
+nL<-c(); nK<-c(); nM<-c(); nF<-c(); nP<-c(); nS<-c(); nT<-c(); nW<-c(); nY<-c(); nV<-c();
+
+for (i in 1:length(peptides)) {
+  nA[i] <- sum(charToRaw(peptides[i]) == charToRaw('A'))
+  nR[i] <- sum(charToRaw(peptides[i]) == charToRaw('R'))
+  nN[i] <- sum(charToRaw(peptides[i]) == charToRaw('N'))
+  nD[i] <- sum(charToRaw(peptides[i]) == charToRaw('D'))
+  nC[i] <- sum(charToRaw(peptides[i]) == charToRaw('C'))
+  nE[i] <- sum(charToRaw(peptides[i]) == charToRaw('E'))
+  nQ[i] <- sum(charToRaw(peptides[i]) == charToRaw('Q'))
+  nG[i] <- sum(charToRaw(peptides[i]) == charToRaw('G'))
+  nH[i] <- sum(charToRaw(peptides[i]) == charToRaw('H'))
+  nI[i] <- sum(charToRaw(peptides[i]) == charToRaw('I'))
+  nL[i] <- sum(charToRaw(peptides[i]) == charToRaw('L'))
+  nK[i] <- sum(charToRaw(peptides[i]) == charToRaw('K'))
+  nM[i] <- sum(charToRaw(peptides[i]) == charToRaw('M'))
+  nF[i] <- sum(charToRaw(peptides[i]) == charToRaw('F'))
+  nP[i] <- sum(charToRaw(peptides[i]) == charToRaw('P'))
+  nS[i] <- sum(charToRaw(peptides[i]) == charToRaw('S'))
+  nT[i] <- sum(charToRaw(peptides[i]) == charToRaw('T'))
+  nW[i] <- sum(charToRaw(peptides[i]) == charToRaw('W'))
+  nY[i] <- sum(charToRaw(peptides[i]) == charToRaw('Y'))
+  nV[i] <- sum(charToRaw(peptides[i]) == charToRaw('V'))
+}
+
+fit <- lm(ZRTs ~ nA+nR+nN+nD+nC+nE+nQ+nG+nH+nI+nL+nK+nM+nF+nP+nS+nT+nW+nY+nV)
+query_coeffs <- as.vector(coefficients(fit))
+
+peptides <-c(); RTs <- c()
+psms <- xmlToList(paste(tolower(REFERENCE), '.interact.pep.xml', sep=''))
+for (i in seq(5,length(psms$msms_run_summary)-1)) {
+    peptides <- c(peptides,as.character(psms$msms_run_summary[i]$spectrum_query$search_result$search_hit$.attrs['peptide']))
+    RTs <- c(RTs,as.numeric(psms$msms_run_summary[i]$spectrum_query$.attrs['retention_time_sec']))
+}
+meanRT <- mean(RTs)
+sdRT <- sd(RTs)
+ZRTs <- (RTs - meanRT)/sdRT
+
+nA<-c(); nR<-c(); nN<-c(); nD<-c(); nC<-c(); nE<-c(); nQ<-c(); nG<-c(); nH<-c(); nI<-c();
+nL<-c(); nK<-c(); nM<-c(); nF<-c(); nP<-c(); nS<-c(); nT<-c(); nW<-c(); nY<-c(); nV<-c();
+
+for (i in 1:length(peptides)) {
+  nA[i] <- sum(charToRaw(peptides[i]) == charToRaw('A'))
+  nR[i] <- sum(charToRaw(peptides[i]) == charToRaw('R'))
+  nN[i] <- sum(charToRaw(peptides[i]) == charToRaw('N'))
+  nD[i] <- sum(charToRaw(peptides[i]) == charToRaw('D'))
+  nC[i] <- sum(charToRaw(peptides[i]) == charToRaw('C'))
+  nE[i] <- sum(charToRaw(peptides[i]) == charToRaw('E'))
+  nQ[i] <- sum(charToRaw(peptides[i]) == charToRaw('Q'))
+  nG[i] <- sum(charToRaw(peptides[i]) == charToRaw('G'))
+  nH[i] <- sum(charToRaw(peptides[i]) == charToRaw('H'))
+  nI[i] <- sum(charToRaw(peptides[i]) == charToRaw('I'))
+  nL[i] <- sum(charToRaw(peptides[i]) == charToRaw('L'))
+  nK[i] <- sum(charToRaw(peptides[i]) == charToRaw('K'))
+  nM[i] <- sum(charToRaw(peptides[i]) == charToRaw('M'))
+  nF[i] <- sum(charToRaw(peptides[i]) == charToRaw('F'))
+  nP[i] <- sum(charToRaw(peptides[i]) == charToRaw('P'))
+  nS[i] <- sum(charToRaw(peptides[i]) == charToRaw('S'))
+  nT[i] <- sum(charToRaw(peptides[i]) == charToRaw('T'))
+  nW[i] <- sum(charToRaw(peptides[i]) == charToRaw('W'))
+  nY[i] <- sum(charToRaw(peptides[i]) == charToRaw('Y'))
+  nV[i] <- sum(charToRaw(peptides[i]) == charToRaw('V'))
+}
+
+fit <- lm(ZRTs ~ nA+nR+nN+nD+nC+nE+nQ+nG+nH+nI+nL+nK+nM+nF+nP+nS+nT+nW+nY+nV)
+reference_coeffs <- as.vector(coefficients(fit))
+
+aa_olc <- c('O','A','R','N','D','C','E','Q','G','H','I','L','K','M','F','P','S','T','W','Y','V')
+
+aa_colors<-c('black','orange', 'blue', 'magenta', 'red', 'green', 'red', 'magenta', 'orange',
+           'blue', 'green', 'green', 'blue', 'green', 'green', 'green', 'orange', 
+           'orange', 'green', 'green', 'green', 'yellow', 'yellow', 'yellow', 'yellow')
+limits <- c(min(reference_coeffs[1:21], query_coeffs[1:21]), max(reference_coeffs[1:21], query_coeffs[1:21]))
+plot(reference_coeffs[1:21], query_coeffs[1:21], pch=19, cex=2.5, 
+     col=alpha(aa_colors, 0.6), xlab='reference retention coefficient (Z-score)', 
+     ylab='query retention coefficient (Z-score)', xlim=limits, ylim=limits, text(reference_coeffs[1:21], query_coeffs[1:21]+0.0047*(max(query_coeffs[1:21])-min(query_coeffs[1:21])), aa_olc, col='black', font=2, cex=0.8)) 
+
+abline(a=0, b=1, lty=2)
+```
+\begin{center}Figure 2: Retention time coefficients for query compared with reference. The closer to the 45-degree diagonal the better. Deviation in basic and/or acidic residues suggests different pH.\end{center}
