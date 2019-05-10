@@ -1,8 +1,9 @@
 ---
 title: "LC QC Report"
-date version: "May 8, 2019"
 output:
   html_document: default
+  pdf_document: default
+date version: May 10, 2019
 ---
 
 [//]: # (This sub-report contains metrics related to the performance of LC system components. Metrics include estimated pH of mobile phases, column heater, shape of gradient, peak shape statistics (such as FWHM for 25, 50 and 75% quartiles and base peak width). Future work will include determining % TIC that is polysiloxane or detergents in order to evaluate column health and system contamination. This sub-report assumes the MS2.Rmd has been run first so that the files are available.)
@@ -168,4 +169,4 @@ plot(reference_coeffs[1:21], query_coeffs[1:21], pch=19, cex=2.5,
 
 abline(a=0, b=1, lty=2)
 ```
-\begin{center}Figure 2: Retention time coefficients for query compared with reference. The closer to the 45-degree diagonal the better. Deviation in basic and/or acidic residues suggests different pH.\end{center}
+\begin{center}Figure 1: Retention time coefficients for query compared with reference. The closer to the 45-degree diagonal the better. Deviation in basic and/or acidic residues suggests different pH.\end{center}
