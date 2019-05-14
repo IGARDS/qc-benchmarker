@@ -1,14 +1,81 @@
 <html>
     <body>
-        Doc
+<style>
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 5px;
+}
+td {
+  text-align: center;
+}
+</style>
+        <h2>Documentation</h2>
 		<br>
-		Introduce overall concept of commercial digest (which?), standard acquisition method, and what the information given is.
+		QC Benchmarker relies on using data generated from a commercial protein digest, and that the data be acquired in a standardized fashion.
 		<br>
-		Current supported commercial materials (and future)
+		While still in beta, only a HeLa digest is supported, but in the future the following will be supported: <br>
+		Thermo Scientific HeLa Digest <br>
+		Promega Yeast Digest <br>
+		Waters <i>E. coli</i> Digest <br>
 		<br>
-		What raw file types can be used (along with future support)
+		The recommended loading is 200 ng on column. Prepare the material using the manufacturers suggested protocol. <br>
+		The recommended LC gradient for HeLa and Yeast is:
+		(if using a trap/elute set-up, the first step is 10 minutes of trapping) <br>
 		<br>
-		How to create the files (acquisition params per platform)
+		<table style="width:10%">
+			<tr>
+				<th>Time (min)</th>
+				<th>% Acetonitrile</th> 
+			</tr>
+			<tr>
+				<td>0</td>
+				<td>5</td>
+			</tr>
+			<tr>
+				<td>10</td>
+				<td>5</td>
+			</tr>
+			<tr>
+				<td>115</td>
+				<td>22</td>
+			</tr>
+			<tr>
+				<td>130</td>
+				<td>32</td>
+			</tr>
+			<tr>
+				<td>140</td>
+				<td>95</td>
+			</tr>
+			<tr>
+				<td>150</td>
+				<td>95</td>
+			</tr>
+			<tr>
+				<td>150.1</td>
+				<td>5</td>
+			</tr>
+			<tr>
+				<td>160</td>
+				<td>5</td>
+			</tr>
+		</table>
+		<br>
+		There will be a shorter gradient used for <i>E. coli</i> or for ~40 ng loading of HeLa and yeast. <br>
+		<br>
+		Acquisition settings are given below, and these are not meant to be "best" settings, but are settings known to give certain performance when collecting MS/MS in data-dependent acquisition mode. <br>
+		<br>
+		<br>What raw file types can be used (along with future support)?<br>
+		Since QC Benchmarker relies on msconvert, the following vendor formats are currently supported:<br>
+		Thermo <br>
+		Agilent <br>
+		Bruker <br>
+		Sciex <br>
+		Shimadzu <br>
+		UIMF <br>
 		<br>
 		Using the information, and caveats on thresholds, emphasizing how each instrument is different.
     </body>
