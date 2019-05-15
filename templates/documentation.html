@@ -11,17 +11,23 @@ th, td {
 td {
   text-align: center;
 }
+p {
+  text-indent: 50px;
+}
 </style>
-        <h2>Documentation</h2>
+        <h1>Documentation</h1>
 		<br>
-		QC Benchmarker relies on using data generated from a commercial protein digest, and that the data be acquired in a standardized fashion.
+		QC Benchmarker relies on using data generated from a commercial protein digest, and that the data be acquired in a standardized fashion. <br>
 		<br>
+		<h2>Commercial Digest</h2> <br>
 		While still in beta, only a HeLa digest is supported, but in the future the following will be supported: <br>
-		Thermo Scientific HeLa Digest <br>
-		Promega Yeast Digest <br>
-		Waters <i>E. coli</i> Digest <br>
+		<p>Thermo Scientific HeLa Digest</p>
+		<p>Promega Yeast Digest</p>
+		<p>Waters <i>E. coli</i> Digest</p>
 		<br>
-		The recommended loading is 200 ng on column. Prepare the material using the manufacturers suggested protocol. <br>
+		<h2>Loading and LC Conditions</h2>
+		The recommended loading is 200 ng on column. Prepare the material using the manufacturer's suggested protocol. <br>
+		<br>
 		The recommended LC gradient for HeLa and Yeast is:
 		(if using a trap/elute set-up, the first step is 10 minutes of trapping) <br>
 		<br>
@@ -66,17 +72,222 @@ td {
 		<br>
 		There will be a shorter gradient used for <i>E. coli</i> or for ~40 ng loading of HeLa and yeast. <br>
 		<br>
-		Acquisition settings are given below, and these are not meant to be "best" settings, but are settings known to give certain performance when collecting MS/MS in data-dependent acquisition mode. <br>
+		<h2>MS/MS Acquisition Settings</h2>
+		Acquisition settings are given below, and these are not meant to be "best" settings, but are settings known to give certain performance when collecting MS/MS in data-dependent acquisition mode. <b>More settings will become available with time.</b><br>
+		<h3>Fusion Lumos (no APM) - 200 ng</h3>
+		<table style="width:20%">
+			<tr>
+				<th>Parameter</th>
+				<th>Value</th> 
+			</tr>
+			<tr>
+				<td>Gradient</td>
+				<td>140 min</td>
+			</tr>
+			<tr>
+				<td>ITT temp</td>
+				<td>275</td>
+			</tr>
+			<tr>
+				<td>Default z</td>
+				<td>2</td>
+			</tr>
+			<tr>
+				<td>S-Lens RF</td>
+				<td>30</td>
+			</tr>
+			<tr>
+				<td>Resolution MS1</td>
+				<td>120,000</td>
+			</tr>
+			<tr>
+				<td>AGC MS1</td>
+				<td>4e5</td>
+			</tr>
+			<tr>
+				<td>Max IT MS1</td>
+				<td>50 ms</td>
+			</tr>
+			<tr>
+				<td>Scan Range MS1</td>
+				<td>375 - 1500</td>
+			</tr>
+			<tr>
+				<td>Intensity Threshold</td>
+				<td>1e4</td>
+			</tr>
+			<tr>
+				<td>z exclusion</td>
+				<td>?, 1, >7</td>
+			</tr>
+			<tr>
+				<td>Exclude Isotope </td>
+				<td>ON</td>
+			</tr>
+			<tr>
+				<td>Dynamic Exclusion Time</td>
+				<td>60 ms</td>
+			</tr>
+			<tr>
+				<td>Dynamic Exclusion Tolerance</td>
+				<td>10 ppm</td>
+			</tr>
+			<tr>
+				<td>Quad Iso Width</td>
+				<td>0.7</td>
+			</tr>
+			<tr>
+				<td>NCE</td>
+				<td>*HCD 32</td>
+			</tr>
+			<tr>
+				<td>Resolution MS2</td>
+				<td>30,000</td>
+			</tr>
+			<tr>
+				<td>First Mass MS2</td>
+				<td>110</td>
+			</tr>
+			<tr>
+				<td>AGC MS2</td>
+				<td>2e5</td>
+			</tr>
+			<tr>
+				<td>Max IT MS2</td>
+				<td>60 ms</td>
+			</tr>
+			<tr>
+				<td>TopN or seconds</td>
+				<td>3 s</td>
+			</tr>
+			<tr>
+				<td>Scan Range MS2</td>
+				<td>auto</td>
+			</tr>
+			<tr>
+				<td>Parallelization</td>
+				<td>off</td>
+			</tr>
+			<tr>
+				<td>Peptide Match </td>
+				<td>ON (Relax OFF)</td>
+			</tr>
+		</table>
+		* Collision energy is dependent on your instrument, but somewhere around 30 is acceptable. <br>
+		<h3>QE Classic - 200 ng</h3>
+		<table style="width:20%">
+			<tr>
+				<th>Parameter</th>
+				<th>Value</th> 
+			</tr>
+			<tr>
+				<td>Gradient</td>
+				<td>140 min</td>
+			</tr>
+			<tr>
+				<td>ITT temp</td>
+				<td>250</td>
+			</tr>
+			<tr>
+				<td>Default z</td>
+				<td>2</td>
+			</tr>
+			<tr>
+				<td>S-Lens RF</td>
+				<td>55</td>
+			</tr>
+			<tr>
+				<td>Resolution MS1</td>
+				<td>70,000</td>
+			</tr>
+			<tr>
+				<td>AGC MS1</td>
+				<td>3e6</td>
+			</tr>
+			<tr>
+				<td>Max IT MS1</td>
+				<td>60 ms</td>
+			</tr>
+			<tr>
+				<td>Scan Range MS1</td>
+				<td>375 - 1500</td>
+			</tr>
+			<tr>
+				<td>Intensity Threshold</td>
+				<td>3.3e4</td>
+			</tr>
+			<tr>
+				<td>z exclusion</td>
+				<td>?, 1</td>
+			</tr>
+			<tr>
+				<td>Exclude Isotope </td>
+				<td>ON</td>
+			</tr>
+			<tr>
+				<td>Dynamic Exclusion Time</td>
+				<td>30 ms</td>
+			</tr>
+			<tr>
+				<td>Dynamic Exclusion Tolerance</td>
+				<td>N/A</td>
+			</tr>
+			<tr>
+				<td>Quad Iso Width</td>
+				<td>2.0</td>
+			</tr>
+			<tr>
+				<td>NCE</td>
+				<td>27</td>
+			</tr>
+			<tr>
+				<td>Resolution MS2</td>
+				<td>17,500</td>
+			</tr>
+			<tr>
+				<td>First Mass MS2</td>
+				<td>100</td>
+			</tr>
+			<tr>
+				<td>AGC MS2</td>
+				<td>1e5</td>
+			</tr>
+			<tr>
+				<td>Max IT MS2</td>
+				<td>60 ms</td>
+			</tr>
+			<tr>
+				<td>MSX</td>
+				<td>1</td>
+			</tr>
+			<tr>
+				<td>TopN or seconds</td>
+				<td>Top 10</td>
+			</tr>
+			<tr>
+				<td>Loop Count</td>
+				<td>10</td>
+			</tr>
+			<tr>
+				<td>Scan Range MS2</td>
+				<td>N/A</td>
+			</tr>
+			<tr>
+				<td>Peptide Match </td>
+				<td>preferred</td>
+			</tr>
+		</table>
 		<br>
-		<br>What raw file types can be used (along with future support)?<br>
+		<h2>Instrument File Support</h2>
 		Since QC Benchmarker relies on msconvert, the following vendor formats are currently supported:<br>
-		Thermo <br>
-		Agilent <br>
-		Bruker <br>
-		Sciex <br>
-		Shimadzu <br>
-		UIMF <br>
+		<p>Thermo </p>
+		<p>Agilent </p>
+		<p>Bruker </p>
+		<p>Sciex </p>
+		<p>Shimadzu </p>
+		<p>UIMF </p>
 		<br>
-		Using the information, and caveats on thresholds, emphasizing how each instrument is different.
+		<h2>Miscellaneous</h2>
+		It is important to note that system performance can vary, and that QC Benchmarker is meant to describe at what performance has dropped precipitously.  Thresholds are based on typical runs for each platform (not outlier excellent runs), but this isn’t to say that these thresholds are universally applicable. For example, LC peak widths may vary from 15 seconds to 60 seconds across labs. If 60 seconds is considered normal, then any quality judgement QC Benchmarker makes should be ignored. But the concept of running a single material under standard conditions will give users the ability to generate quality metrics over time, and thereby inform system performance and direct troubleshooting.
     </body>
 </html>
