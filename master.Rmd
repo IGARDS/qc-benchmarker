@@ -1,24 +1,36 @@
+---
+title: "Master Pipeline"
+output:
+  html_document: default
+  pdf_document: default
+date version: May 16, 2019
+---
+
+[//]: # (This file is meant to run all processing once the query has been uploaded. It is an .Rmd, but will not be used for display. The primary function is to perform file conversion and searching, with results kept in the workspace for ensuing .Rmd files to use when generating reports. Also we will write 5 .result files to be used to retrieve graphics displayed in middle iframe. These will have a value of 0, 1, 2, 3, or 4.  
+processing in progress = 0  
+good = 1  
+marginal = 2  
+bad = 3  
+error = 4  
+QUERY, OUTPUT_DIR are set at upload  
+reference related files (.raw, .mzML, and .interact.pep.xml) should be present in /data/qc-benchmarker-data/)
+
+[//]: # (Load R packages)
+
+```{r Setup, echo=FALSE}
 library(mzR)
 library(MSnbase)
 library(scales)
 library(XML)
 library(pepXMLTab)
 library(ggplot2)
-
-# This file will run after a query has been uploaded. It is an .Rmd, but will not be used for display. The primary function is to perform file conversion and searching, with results kept in the workspace for ensuing .Rmd files to use when generating reports. Also we will write 5 .result files to be used to retrieve graphics displayed in middle iframe. These will have a value of 0, 1, 2, 3, or 4.
-# processing in progress = 0
-# good = 1
-# marginal = 2
-# bad = 3
-# error = 4
+```
 
 
-# QUERY, OUTPUT_DIR are set at upload
-# reference related files (.raw, .mzML, and .interact.pep.xml) should be present in /data/qc-benchmarker-data/
 
+[//]: # (1. Call reference files, process QUERY, write .result files. In future iterations will perform lite search to determine if HeLa, yeast or E. coli)
 
-# 1. Call reference files, process QUERY, write .result files
-
+```{r Import, process and write files, echo=FALSE}
 DATA_DIR <- '/data/qc-benchmarker-data/'
 REFERENCE <- paste(DATA_DIR,'2018-10-15_HeLa_OTOT',sep='')   # reference
 AMOUNT_INJECTED <- 200                                       # ng HeLa injected (reference)
@@ -41,16 +53,13 @@ system('echo 0 > lc.result')
 system('echo 0 > source.result')
 system('echo 0 > ms1.result')
 system('echo 0 > ms2.result')
-
-
-# In future iterations will perform lite search to determine if HeLa, yeast or E. coli
+```
 
 
 
-# 2. Perform searches for ID-based metrics
+[//]: # (2. Perform searches for ID-based metrics. Note that this step will not complete if something is wrong, and is a good check point to use and go straight to "can't process" which is 4 > *.results. 0 in *.results will be reserved for "in-progress".)
 
-# note that this step will not complete if something is wrong, and is a good check point to use and go straight to "can't process" which is 4 > *.results. 0 in *.results will be reserved for "in-progress"
-
+```{r Searching, echo=FALSE}
 # Perform SpectraST search
 system(paste('spectrast -sL', SPECTRAST_LIBRARY, ' -sD', FASTA_FILE,
              ' -sTAA -sA! -s_HOM4 -sR! -sEpep.xml ', QUERY, '.mzML', sep = ''))
@@ -67,14 +76,13 @@ query_ids <- openIDfile(paste(QUERY, '.mzid', sep=''))
 PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 
 # if query_ids is empty then write all 5 .result files with 4, but place this condition at the end of this file
+```
 
 
-# 3. Sample
 
-# estimate loading and store
-# generate structure with distribution of charge states
-# calculate percent matched spectra to material
+[//]: # (3. Sample. Estimate loading and store. Generate structure with distribution of charge states. Calculate percent matched spectra to material.)
 
+```{r Sample, echo=FALSE}
 reference_file <- openMSfile(paste(REFERENCE, '.mzML', sep=''))
 query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
 
@@ -92,13 +100,13 @@ cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC)/sum(reference_TIC), 
 
 # for now will call good
 system('echo 1 > sample.result')
+```
 
 
 
-# 4. LC
+[//]: # (4. LC; Estimate peak capacity. Calculate peak capacity as defined in QuiC or ID-free?)
 
-# Estimate peak capacity
-# Calculate peak capacity as defined in QuiC or ID-free?
+```{r LC echo=FALSE}
 query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
 query_BPC <- chromatogram(query, aggregationFun = "max")
 
@@ -224,12 +232,12 @@ abline(a=0, b=1, lty=2)
 
 # for now will call good
 system('echo 1 > source.result')
+```
 
 
+[//]: # (5. Source. Compare signal stability)
 
-# 5. Source
-
-# compare signal stability
+```{r Source echo=FALSE}
 # query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
 query_TIC <- chromatogram(query, aggregationFun = "sum")
 
@@ -250,13 +258,12 @@ median_TIC <- median(as.numeric(query_TIC[1,1]@intensity))
 
 # for now will call good
 system('echo 1 > source.result')
+```
 
 
+[//]: # (6. MS1. TIC and mass error can be used for quality judgement)
 
-# 6. MS1
-
-# TIC and mass error can be used for quality judgement
-
+```{r MS1 echo=FALSE}
 # Extract QC values from query and compare with reference
 reference_file <- openMSfile(paste(REFERENCE, '.mzML', sep=''))
 query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
@@ -275,27 +282,29 @@ cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of refere
 
 # for now will call good
 system('echo 1 > ms1.result')
+```
 
 
 
-# 7. MS2
+[//]: # (7. MS2. PSMs and mass error will be used for quality)
 
-# PSMs and mass error will be used for quality
-
+```{r MS2 echo=FALSE}
 # good (1)= PSMs within 20% of reference
 # marginal (2)= PSMs within 50% of reference
 # bad (3) = PSMs more than 50% of reference
 
 # for now will call good
-system('echo 1 > ms2.result'
+system('echo 1 > ms2.result')
+```
 
 
 
-# 8. Call errors
+[//]: # (8. Call errors. If query_ids is empty then write all 5 .result files with 4.)
 
-# if query_ids is empty then write all 5 .result files with 4, but place this condition at the end of this file
-# system('echo 4 > sample.result'
-# system('echo 4 > LC.result'
-# system('echo 4 > source.result'
-# system('echo 4 > ms1.result'
-# system('echo 4 > ms2.result'
+```{r Error Call echo=FALSE}
+# system('echo 4 > sample.result')
+# system('echo 4 > LC.result')
+# system('echo 4 > source.result')
+# system('echo 4 > ms1.result')
+# system('echo 4 > ms2.result')
+```
