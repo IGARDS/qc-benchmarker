@@ -1,0 +1,301 @@
+library(mzR)
+library(MSnbase)
+library(scales)
+library(XML)
+library(pepXMLTab)
+library(ggplot2)
+
+# This file will run after a query has been uploaded. It is an .Rmd, but will not be used for display. The primary function is to perform file conversion and searching, with results kept in the workspace for ensuing .Rmd files to use when generating reports. Also we will write 5 .result files to be used to retrieve graphics displayed in middle iframe. These will have a value of 0, 1, 2, 3, or 4.
+# processing in progress = 0
+# good = 1
+# marginal = 2
+# bad = 3
+# error = 4
+
+
+# QUERY, OUTPUT_DIR are set at upload
+# reference related files (.raw, .mzML, and .interact.pep.xml) should be present in /data/qc-benchmarker-data/
+
+
+# 1. Call reference files, process QUERY, write .result files
+
+DATA_DIR <- '/data/qc-benchmarker-data/'
+REFERENCE <- paste(DATA_DIR,'2018-10-15_HeLa_OTOT',sep='')   # reference
+AMOUNT_INJECTED <- 200                                       # ng HeLa injected (reference)
+SPECTRAST_LIBRARY <- paste(DATA_DIR,'HeLa.splib',sep='')                   # HeLa library
+FASTA_FILE <- paste(DATA_DIR,'up000005640.fasta',sep='')                   # sequence database
+#MZML_DIR <- ''                                              # is this neccesary or even being used?
+mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')
+
+# convert query to mzML
+system(paste('wine msconvert', paste(OUTPUT_DIR,'/../',QUERY,'.raw',sep=''),'-v --mzML -o',OUTPUT_DIR))
+
+query_file <- openMSfile(mzml_file)
+make <- instrumentInfo(query_file)$manufacturer
+model <- instrumentInfo(query_file)$model
+# cat('Query file is', make, model)
+
+# write .result files as "processing in progress"
+system('echo 0 > sample.result')
+system('echo 0 > lc.result')
+system('echo 0 > source.result')
+system('echo 0 > ms1.result')
+system('echo 0 > ms2.result')
+
+
+# In future iterations will perform lite search to determine if HeLa, yeast or E. coli
+
+
+
+# 2. Perform searches for ID-based metrics
+
+# note that this step will not complete if something is wrong, and is a good check point to use and go straight to "can't process" which is 4 > *.results. 0 in *.results will be reserved for "in-progress"
+
+# Perform SpectraST search
+system(paste('spectrast -sL', SPECTRAST_LIBRARY, ' -sD', FASTA_FILE,
+             ' -sTAA -sA! -s_HOM4 -sR! -sEpep.xml ', QUERY, '.mzML', sep = ''))
+system(paste('xinteract -N', sub('$', '.interact.pep.xml', QUERY), 
+             ' -p0.95 -l7 -PPM -O -D', FASTA_FILE, ' ', QUERY, '.pep.xml', sep = ''))
+
+# Extract QC values from SpectraST search
+system(paste('idconvert ', REFERENCE, '.interact.pep.xml', sep='')) 
+system(paste('idconvert ', QUERY, '.interact.pep.xml', sep='')) 
+
+reference_ids <- openIDfile(paste(REFERENCE, '.mzid', sep=''))
+query_ids <- openIDfile(paste(QUERY, '.mzid', sep=''))
+
+PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
+
+# if query_ids is empty then write all 5 .result files with 4, but place this condition at the end of this file
+
+
+# 3. Sample
+
+# estimate loading and store
+# generate structure with distribution of charge states
+# calculate percent matched spectra to material
+
+reference_file <- openMSfile(paste(REFERENCE, '.mzML', sep=''))
+query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
+
+reference_TIC <- tic(reference_file)
+query_TIC <- tic(query_file)
+
+cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of reference.',
+    sep='')
+cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC)/sum(reference_TIC), ' ng.',
+    sep='')
+
+# good (1)= 40% or greater of matched spectra
+# marginal (2)= 20-40% of matched spectra
+# bad (3) = <20% matched spectra
+
+# for now will call good
+system('echo 1 > sample.result')
+
+
+
+# 4. LC
+
+# Estimate peak capacity
+# Calculate peak capacity as defined in QuiC or ID-free?
+query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
+query_BPC <- chromatogram(query, aggregationFun = "max")
+
+
+x <- as.numeric(query_BPC[1,1]@rtime)
+y <- as.numeric(query_BPC[1,1]@intensity)
+
+x2 <- seq(round(min(x)),round(max(x)),0.1)
+y2 <- rep(0,length(x2))
+
+for(i in 1:length(y2)) {
+  j <- which.min(abs(x2[i]-x))
+  y2[i] <- y[j]
+}
+  
+fy2 <- Re(fft(fft(y2)*Conj(fft(y2)), inverse = TRUE))
+
+max_fy2 <- max(fy2)
+min_fy2_w <- min(fy2[1:1000])
+for(i in 1:1000) {if(fy2[i]<(min_fy2_w+(max_fy2-min_fy2_w)/2)) break}
+peak_width <- 1.412517*i*0.1 # FWHM = 1.412517 * (lag at autocorrelation half maximum for gaussian)
+cat('Mean peak width (FWHM equivalent) =', signif(peak_width, digits=4), "seconds")
+
+gradient_length <- 120*60 # in seconds
+cat('Theor. peak capacity =', signif(gradient_length/peak_width, digits=4))
+
+# Look at retention coeffecients
+# Here we train a linear model (Palmblad *et al*., 2002) for predicting retention times, and compare the amino acid coefficients of the query model with those from the reference model. This will reveal changes in mobile phase composition, such as ionic strength or pH. The training is here done with R packages.
+
+peptides <-c(); RTs <- c()
+psms <- xmlToList(paste(tolower(QUERY), '.interact.pep.xml', sep=''))
+for (i in seq(5,length(psms$msms_run_summary)-1)) {
+    peptides <- c(peptides,as.character(psms$msms_run_summary[i]$spectrum_query$search_result$search_hit$.attrs['peptide']))
+    RTs <- c(RTs,as.numeric(psms$msms_run_summary[i]$spectrum_query$.attrs['retention_time_sec']))
+}
+meanRT <- mean(RTs)
+sdRT <- sd(RTs)
+ZRTs <- (RTs - meanRT)/sdRT
+ 
+nA<-c(); nR<-c(); nN<-c(); nD<-c(); nC<-c(); nE<-c(); nQ<-c(); nG<-c(); nH<-c(); nI<-c();
+nL<-c(); nK<-c(); nM<-c(); nF<-c(); nP<-c(); nS<-c(); nT<-c(); nW<-c(); nY<-c(); nV<-c();
+
+for (i in 1:length(peptides)) {
+  nA[i] <- sum(charToRaw(peptides[i]) == charToRaw('A'))
+  nR[i] <- sum(charToRaw(peptides[i]) == charToRaw('R'))
+  nN[i] <- sum(charToRaw(peptides[i]) == charToRaw('N'))
+  nD[i] <- sum(charToRaw(peptides[i]) == charToRaw('D'))
+  nC[i] <- sum(charToRaw(peptides[i]) == charToRaw('C'))
+  nE[i] <- sum(charToRaw(peptides[i]) == charToRaw('E'))
+  nQ[i] <- sum(charToRaw(peptides[i]) == charToRaw('Q'))
+  nG[i] <- sum(charToRaw(peptides[i]) == charToRaw('G'))
+  nH[i] <- sum(charToRaw(peptides[i]) == charToRaw('H'))
+  nI[i] <- sum(charToRaw(peptides[i]) == charToRaw('I'))
+  nL[i] <- sum(charToRaw(peptides[i]) == charToRaw('L'))
+  nK[i] <- sum(charToRaw(peptides[i]) == charToRaw('K'))
+  nM[i] <- sum(charToRaw(peptides[i]) == charToRaw('M'))
+  nF[i] <- sum(charToRaw(peptides[i]) == charToRaw('F'))
+  nP[i] <- sum(charToRaw(peptides[i]) == charToRaw('P'))
+  nS[i] <- sum(charToRaw(peptides[i]) == charToRaw('S'))
+  nT[i] <- sum(charToRaw(peptides[i]) == charToRaw('T'))
+  nW[i] <- sum(charToRaw(peptides[i]) == charToRaw('W'))
+  nY[i] <- sum(charToRaw(peptides[i]) == charToRaw('Y'))
+  nV[i] <- sum(charToRaw(peptides[i]) == charToRaw('V'))
+}
+
+fit <- lm(ZRTs ~ nA+nR+nN+nD+nC+nE+nQ+nG+nH+nI+nL+nK+nM+nF+nP+nS+nT+nW+nY+nV)
+query_coeffs <- as.vector(coefficients(fit))
+
+peptides <-c(); RTs <- c()
+psms <- xmlToList(paste(tolower(REFERENCE), '.interact.pep.xml', sep=''))
+for (i in seq(5,length(psms$msms_run_summary)-1)) {
+    peptides <- c(peptides,as.character(psms$msms_run_summary[i]$spectrum_query$search_result$search_hit$.attrs['peptide']))
+    RTs <- c(RTs,as.numeric(psms$msms_run_summary[i]$spectrum_query$.attrs['retention_time_sec']))
+}
+meanRT <- mean(RTs)
+sdRT <- sd(RTs)
+ZRTs <- (RTs - meanRT)/sdRT
+
+nA<-c(); nR<-c(); nN<-c(); nD<-c(); nC<-c(); nE<-c(); nQ<-c(); nG<-c(); nH<-c(); nI<-c();
+nL<-c(); nK<-c(); nM<-c(); nF<-c(); nP<-c(); nS<-c(); nT<-c(); nW<-c(); nY<-c(); nV<-c();
+
+for (i in 1:length(peptides)) {
+  nA[i] <- sum(charToRaw(peptides[i]) == charToRaw('A'))
+  nR[i] <- sum(charToRaw(peptides[i]) == charToRaw('R'))
+  nN[i] <- sum(charToRaw(peptides[i]) == charToRaw('N'))
+  nD[i] <- sum(charToRaw(peptides[i]) == charToRaw('D'))
+  nC[i] <- sum(charToRaw(peptides[i]) == charToRaw('C'))
+  nE[i] <- sum(charToRaw(peptides[i]) == charToRaw('E'))
+  nQ[i] <- sum(charToRaw(peptides[i]) == charToRaw('Q'))
+  nG[i] <- sum(charToRaw(peptides[i]) == charToRaw('G'))
+  nH[i] <- sum(charToRaw(peptides[i]) == charToRaw('H'))
+  nI[i] <- sum(charToRaw(peptides[i]) == charToRaw('I'))
+  nL[i] <- sum(charToRaw(peptides[i]) == charToRaw('L'))
+  nK[i] <- sum(charToRaw(peptides[i]) == charToRaw('K'))
+  nM[i] <- sum(charToRaw(peptides[i]) == charToRaw('M'))
+  nF[i] <- sum(charToRaw(peptides[i]) == charToRaw('F'))
+  nP[i] <- sum(charToRaw(peptides[i]) == charToRaw('P'))
+  nS[i] <- sum(charToRaw(peptides[i]) == charToRaw('S'))
+  nT[i] <- sum(charToRaw(peptides[i]) == charToRaw('T'))
+  nW[i] <- sum(charToRaw(peptides[i]) == charToRaw('W'))
+  nY[i] <- sum(charToRaw(peptides[i]) == charToRaw('Y'))
+  nV[i] <- sum(charToRaw(peptides[i]) == charToRaw('V'))
+}
+
+fit <- lm(ZRTs ~ nA+nR+nN+nD+nC+nE+nQ+nG+nH+nI+nL+nK+nM+nF+nP+nS+nT+nW+nY+nV)
+reference_coeffs <- as.vector(coefficients(fit))
+
+aa_olc <- c('O','A','R','N','D','C','E','Q','G','H','I','L','K','M','F','P','S','T','W','Y','V')
+
+aa_colors<-c('black','orange', 'blue', 'magenta', 'red', 'green', 'red', 'magenta', 'orange',
+           'blue', 'green', 'green', 'blue', 'green', 'green', 'green', 'orange', 
+           'orange', 'green', 'green', 'green', 'yellow', 'yellow', 'yellow', 'yellow')
+limits <- c(min(reference_coeffs[1:21], query_coeffs[1:21]), max(reference_coeffs[1:21], query_coeffs[1:21]))
+plot(reference_coeffs[1:21], query_coeffs[1:21], pch=19, cex=2.5, 
+     col=alpha(aa_colors, 0.6), xlab='reference retention coefficient (Z-score)', 
+     ylab='query retention coefficient (Z-score)', xlim=limits, ylim=limits, text(reference_coeffs[1:21], query_coeffs[1:21]+0.0047*(max(query_coeffs[1:21])-min(query_coeffs[1:21])), aa_olc, col='black', font=2, cex=0.8)) 
+
+abline(a=0, b=1, lty=2)
+
+# good (1)= peak capacity of >300 and slope of coeffecients is within 20% of 1 (45-degree diagonal)
+# marginal (2)= peak capacity of 200-300 and slope of coeffecients is within 50-20% of 1 (45-degree diagonal)
+# bad (3) = peak capacity of <200 and slope of coeffecients is within >50% of 1 (45-degree diagonal)
+
+# for now will call good
+system('echo 1 > source.result')
+
+
+
+# 5. Source
+
+# compare signal stability
+# query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
+query_TIC <- chromatogram(query, aggregationFun = "sum")
+
+reference <- readMSData(paste(REFERENCE, '.mzML', sep=''), msLevel = 1)
+reference_TIC <- chromatogram(reference, aggregationFun = "sum")
+
+x <- as.numeric(query_TIC[1,1]@intensity)
+query_cor <- cor(x[-length(x)],x[-1])
+x <- as.numeric(reference_TIC[1,1]@intensity)
+reference_cor <- cor(x[-length(x)],x[-1])
+
+# TIC intensity
+median_TIC <- median(as.numeric(query_TIC[1,1]@intensity))
+
+# good (1)= query_cor >= 0.8
+# marginal (2)= query_cor 0.5 to 0.8
+# bad (3) = query_cor < 0.5
+
+# for now will call good
+system('echo 1 > source.result')
+
+
+
+# 6. MS1
+
+# TIC and mass error can be used for quality judgement
+
+# Extract QC values from query and compare with reference
+reference_file <- openMSfile(paste(REFERENCE, '.mzML', sep=''))
+query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
+
+reference_TIC <- tic(reference_file)
+query_TIC <- tic(query_file)
+
+cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of reference.',
+    sep='')
+# cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC)/sum(reference_TIC), ' ng.',
+#    sep='')
+
+# good (1)= TIC within 20% of reference
+# marginal (2)= TIC within 50% of reference
+# bad (3) = TIC more than 50% of reference
+
+# for now will call good
+system('echo 1 > ms1.result')
+
+
+
+# 7. MS2
+
+# PSMs and mass error will be used for quality
+
+# good (1)= PSMs within 20% of reference
+# marginal (2)= PSMs within 50% of reference
+# bad (3) = PSMs more than 50% of reference
+
+# for now will call good
+system('echo 1 > ms2.result'
+
+
+
+# 8. Call errors
+
+# if query_ids is empty then write all 5 .result files with 4, but place this condition at the end of this file
+# system('echo 4 > sample.result'
+# system('echo 4 > LC.result'
+# system('echo 4 > source.result'
+# system('echo 4 > ms1.result'
+# system('echo 4 > ms2.result'
