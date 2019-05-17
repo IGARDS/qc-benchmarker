@@ -32,17 +32,20 @@ library(ggplot2)
 
 ```{r Import, process and write files, echo=FALSE}
 DATA_DIR <- '/data/qc-benchmarker-data/'
-REFERENCE <- paste(DATA_DIR,'2018-10-15_HeLa_OTOT',sep='')   # reference
+REFERENCE <- paste('2018-10-15_HeLa_OTOT',sep='')   # reference name for later use with different file types
 AMOUNT_INJECTED <- 200                                       # ng HeLa injected (reference)
-SPECTRAST_LIBRARY <- paste(DATA_DIR,'HeLa.splib',sep='')                   # HeLa library
-FASTA_FILE <- paste(DATA_DIR,'up000005640.fasta',sep='')                   # sequence database
-#MZML_DIR <- ''                                              # is this neccesary or even being used?
-mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')
+SPECTRAST_LIBRARY <- paste(DATA_DIR,'/','HeLa.splib',sep='')                   # HeLa library
+FASTA_FILE <- paste(DATA_DIR,'/','up000005640.fasta',sep='')                   # sequence database
+#MZML_DIR <- ''                                              # working directory is OUTPUT_DIR
+#mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')       # didn't use this abbreviation
+
+
 
 # convert query to mzML
 system(paste('wine msconvert', paste(OUTPUT_DIR,'/../',QUERY,'.raw',sep=''),'-v --mzML -o',OUTPUT_DIR))
+# even though OUTPUT_DIR is specified, it isn't required since is the current working dir
 
-query_file <- openMSfile(mzml_file)
+query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
 make <- instrumentInfo(query_file)$manufacturer
 model <- instrumentInfo(query_file)$model
 # cat('Query file is', make, model)
@@ -67,10 +70,12 @@ system(paste('xinteract -N', sub('$', '.interact.pep.xml', QUERY),
              ' -p0.95 -l7 -PPM -O -D', FASTA_FILE, ' ', QUERY, '.pep.xml', sep = ''))
 
 # Extract QC values from SpectraST search
-system(paste('idconvert ', REFERENCE, '.interact.pep.xml', sep='')) 
+# use already processed reference file
+system(paste('idconvert ', DATA_DIR,'/', REFERENCE, '.interact.pep.xml',sep='')) 
 system(paste('idconvert ', QUERY, '.interact.pep.xml', sep='')) 
 
-reference_ids <- openIDfile(paste(REFERENCE, '.mzid', sep=''))
+# not sure if the mzid is created in working_dir or in oridinal xml location on DATA_DIR
+reference_ids <- openIDfile(paste(DATA_DIR,'/', REFERENCE, '.mzid', sep=''))
 query_ids <- openIDfile(paste(QUERY, '.mzid', sep=''))
 
 PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
@@ -83,8 +88,8 @@ PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 [//]: # (3. Sample. Estimate loading and store. Generate structure with distribution of charge states. Calculate percent matched spectra to material.)
 
 ```{r Sample, echo=FALSE}
-reference_file <- openMSfile(paste(REFERENCE, '.mzML', sep=''))
-query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
+reference_file <- openMSfile(paste(DATA_DIR,'/', REFERENCE, '.mzML', sep=''))
+# query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))      # we already read this in at the start
 
 reference_TIC <- tic(reference_file)
 query_TIC <- tic(query_file)
@@ -238,10 +243,10 @@ system('echo 1 > source.result')
 [//]: # (5. Source. Compare signal stability)
 
 ```{r Source echo=FALSE}
-# query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
+# query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # already did this for LC section
 query_TIC <- chromatogram(query, aggregationFun = "sum")
 
-reference <- readMSData(paste(REFERENCE, '.mzML', sep=''), msLevel = 1)
+reference <- readMSData(paste(DATA_DIR,'/', REFERENCE, '.mzML', sep=''), msLevel = 1)
 reference_TIC <- chromatogram(reference, aggregationFun = "sum")
 
 x <- as.numeric(query_TIC[1,1]@intensity)
@@ -265,11 +270,13 @@ system('echo 1 > source.result')
 
 ```{r MS1 echo=FALSE}
 # Extract QC values from query and compare with reference
-reference_file <- openMSfile(paste(REFERENCE, '.mzML', sep=''))
-query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
 
-reference_TIC <- tic(reference_file)
-query_TIC <- tic(query_file)
+# the following was performed for sample section
+#reference_file <- openMSfile(paste(DATA_DIR,'/', REFERENCE, '.mzML', sep=''))
+#query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
+#
+#reference_TIC <- tic(reference_file)
+#query_TIC <- tic(query_file)
 
 cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of reference.',
     sep='')
@@ -289,6 +296,7 @@ system('echo 1 > ms1.result')
 [//]: # (7. MS2. PSMs and mass error will be used for quality)
 
 ```{r MS2 echo=FALSE}
+PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 # good (1)= PSMs within 20% of reference
 # marginal (2)= PSMs within 50% of reference
 # bad (3) = PSMs more than 50% of reference
