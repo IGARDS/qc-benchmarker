@@ -34,8 +34,8 @@ library(ggplot2)
 DATA_DIR <- '/data/qc-benchmarker-data/'
 REFERENCE <- paste('2018-10-15_HeLa_OTOT',sep='')   # reference name for later use with different file types
 AMOUNT_INJECTED <- 200                                       # ng HeLa injected (reference)
-SPECTRAST_LIBRARY <- paste(DATA_DIR,'/','HeLa.splib',sep='')                   # HeLa library
-FASTA_FILE <- paste(DATA_DIR,'/','up000005640.fasta',sep='')                   # sequence database
+SPECTRAST_LIBRARY <- paste(DATA_DIR,'HeLa.splib',sep='')                   # HeLa library
+FASTA_FILE <- paste(DATA_DIR,'up000005640.fasta',sep='')                   # sequence database
 #MZML_DIR <- ''                                              # working directory is OUTPUT_DIR
 #mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')       # didn't use this abbreviation
 
@@ -71,11 +71,11 @@ system(paste('xinteract -N', sub('$', '.interact.pep.xml', QUERY),
 
 # Extract QC values from SpectraST search
 # use already processed reference file
-system(paste('idconvert ', DATA_DIR,'/', REFERENCE, '.interact.pep.xml',sep='')) 
+system(paste('idconvert ', DATA_DIR, REFERENCE, '.interact.pep.xml',sep='')) 
 system(paste('idconvert ', QUERY, '.interact.pep.xml', sep='')) 
 
 # not sure if the mzid is created in working_dir or in oridinal xml location on DATA_DIR
-reference_ids <- openIDfile(paste(DATA_DIR,'/', REFERENCE, '.mzid', sep=''))
+reference_ids <- openIDfile(paste(DATA_DIR, REFERENCE, '.mzid', sep=''))
 query_ids <- openIDfile(paste(QUERY, '.mzid', sep=''))
 
 PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
@@ -88,7 +88,7 @@ PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 [//]: # (3. Sample. Estimate loading and store. Generate structure with distribution of charge states. Calculate percent matched spectra to material.)
 
 ```{r Sample, echo=FALSE}
-reference_file <- openMSfile(paste(DATA_DIR,'/', REFERENCE, '.mzML', sep=''))
+reference_file <- openMSfile(paste(DATA_DIR, REFERENCE, '.mzML', sep=''))
 # query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))      # we already read this in at the start
 
 reference_TIC <- tic(reference_file)
@@ -246,7 +246,7 @@ system('echo 1 > source.result')
 # query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # already did this for LC section
 query_TIC <- chromatogram(query, aggregationFun = "sum")
 
-reference <- readMSData(paste(DATA_DIR,'/', REFERENCE, '.mzML', sep=''), msLevel = 1)
+reference <- readMSData(paste(DATA_DIR, REFERENCE, '.mzML', sep=''), msLevel = 1)
 reference_TIC <- chromatogram(reference, aggregationFun = "sum")
 
 x <- as.numeric(query_TIC[1,1]@intensity)
@@ -272,7 +272,7 @@ system('echo 1 > source.result')
 # Extract QC values from query and compare with reference
 
 # the following was performed for sample section
-#reference_file <- openMSfile(paste(DATA_DIR,'/', REFERENCE, '.mzML', sep=''))
+#reference_file <- openMSfile(paste(DATA_DIR, REFERENCE, '.mzML', sep=''))
 #query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
 #
 #reference_TIC <- tic(reference_file)
