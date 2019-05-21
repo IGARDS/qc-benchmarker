@@ -60,7 +60,7 @@ system('echo 0 > ms2.result')
 
 
 
-[//]: # (2. Perform searches for ID-based metrics. Note that this step will not complete if something is wrong, and is a good check point to use and go straight to "can't process" which is 4 > *.results. 0 in *.results will be reserved for "in-progress".)
+[//]: # (2. Perform searches for ID-based metrics. Note that this step will not complete if something is wrong, and is a good check point to use and go straight to "can't process" which is 4 > .results. 0 in .results will be reserved for "in-progress".)
 
 ```{r Searching, echo=FALSE}
 # Perform SpectraST search
@@ -310,9 +310,11 @@ system('echo 1 > ms2.result')
 [//]: # (8. Call errors. If query_ids is empty then write all 5 .result files with 4.)
 
 ```{r Error Call echo=FALSE}
-# system('echo 4 > sample.result')
-# system('echo 4 > LC.result')
-# system('echo 4 > source.result')
-# system('echo 4 > ms1.result')
-# system('echo 4 > ms2.result')
+if(nrow(psms(query_ids)) < 1){
+  system('echo 4 > sample.result')
+  system('echo 4 > LC.result')
+  system('echo 4 > source.result')
+  system('echo 4 > ms1.result')
+  system('echo 4 > ms2.result')
+}
 ```
