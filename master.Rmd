@@ -99,12 +99,20 @@ cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of refere
 cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC)/sum(reference_TIC), ' ng.',
     sep='')
 
+# would like to use matched spectra as well in quality
+
 # good (1)= 40% or greater of matched spectra
 # marginal (2)= 20-40% of matched spectra
 # bad (3) = <20% matched spectra
 
-# for now will call good
-system('echo 1 > sample.result')
+if((100*sum(query_TIC)/sum(reference_TIC)) < 50){
+  system('echo 3 > sample.result')
+} else if ((100*sum(query_TIC)/sum(reference_TIC)) < 80){
+  system('echo 2 > sample.result')
+} else {
+  system('echo 1 > sample.result')
+}
+
 ```
 
 
@@ -257,12 +265,14 @@ reference_cor <- cor(x[-length(x)],x[-1])
 # TIC intensity
 median_TIC <- median(as.numeric(query_TIC[1,1]@intensity))
 
-# good (1)= query_cor >= 0.8
-# marginal (2)= query_cor 0.5 to 0.8
-# bad (3) = query_cor < 0.5
+if((query_cor) < 0.5){
+  system('echo 3 > source.result')
+} else if ((query_cor) < 0.8){
+  system('echo 2 > source.result')
+} else {
+  system('echo 1 > source.result')
+}
 
-# for now will call good
-system('echo 1 > source.result')
 ```
 
 
@@ -297,12 +307,15 @@ system('echo 1 > ms1.result')
 
 ```{r MS2 echo=FALSE}
 PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
-# good (1)= PSMs within 20% of reference
-# marginal (2)= PSMs within 50% of reference
-# bad (3) = PSMs more than 50% of reference
 
-# for now will call good
-system('echo 1 > ms2.result')
+if((100*nrow(psms(reference_ids))/nrow(psms(query_ids))) < 50){
+  shell('echo 3 > ms2.result')
+} else if ((100*nrow(psms(reference_ids))/nrow(psms(query_ids))) < 80){
+  shell('echo 2 > ms2.result')
+} else {
+  shell('echo 1 > ms2.result')
+}
+
 ```
 
 
