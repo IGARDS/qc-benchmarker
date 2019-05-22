@@ -2,7 +2,6 @@
 title: "Master Pipeline"
 output:
   html_document: default
-  pdf_document: default
 date version: May 16, 2019
 ---
 
@@ -26,21 +25,25 @@ library(pepXMLTab)
 library(ggplot2)
 ```
 
-
+```{r Global Options, include=TRUE}
+knitr::opts_chunk$set(fig.width=5, fig.height=5, fig.align='center', warning=FALSE, message=FALSE, error=TRUE)
+options(tinytex.verbose = TRUE)
+```
 
 [//]: # (1. Call reference files, process QUERY, write .result files. In future iterations will perform lite search to determine if HeLa, yeast or E. coli)
 
-```{r Import, process and write files, echo=FALSE}
+```{r Import process and write files, echo=FALSE}
 DATA_DIR <- '/data/qc-benchmarker-data/'
 REFERENCE <- paste(DATA_DIR,'2018-10-15_HeLa_OTOT',sep='')   # reference
 AMOUNT_INJECTED <- 200                                       # ng HeLa injected (reference)
 SPECTRAST_LIBRARY <- paste(DATA_DIR,'HeLa.splib',sep='')                   # HeLa library
 FASTA_FILE <- paste(DATA_DIR,'up000005640.fasta',sep='')                   # sequence database
-#MZML_DIR <- ''                                              # is this neccesary or even being used?
-mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')
+mzml_dir <- paste(OUTPUT_DIR,'/..',sep='')
+mzml_file <- paste(mzml_dir,'/',QUERY,'.mzML',sep='')
 
 # convert query to mzML
-system(paste('wine msconvert', paste(OUTPUT_DIR,'/../',QUERY,'.raw',sep=''),'-v --mzML -o',OUTPUT_DIR))
+print(paste('wine msconvert', paste(OUTPUT_DIR,'/../',QUERY,'.raw',sep=''),'-v --mzML -o',mzml_dir))
+#system(paste('wine msconvert', paste(OUTPUT_DIR,'/../',QUERY,'.raw',sep=''),'-v --mzML -o',mzml_dir))
 
 query_file <- openMSfile(mzml_file)
 make <- instrumentInfo(query_file)$manufacturer
@@ -106,7 +109,7 @@ system('echo 1 > sample.result')
 
 [//]: # (4. LC; Estimate peak capacity. Calculate peak capacity as defined in QuiC or ID-free?)
 
-```{r LC echo=FALSE}
+```{r LC, echo=FALSE}
 query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
 query_BPC <- chromatogram(query, aggregationFun = "max")
 
@@ -237,7 +240,7 @@ system('echo 1 > source.result')
 
 [//]: # (5. Source. Compare signal stability)
 
-```{r Source echo=FALSE}
+```{r Source, echo=FALSE}
 # query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
 query_TIC <- chromatogram(query, aggregationFun = "sum")
 
@@ -263,7 +266,7 @@ system('echo 1 > source.result')
 
 [//]: # (6. MS1. TIC and mass error can be used for quality judgement)
 
-```{r MS1 echo=FALSE}
+```{r MS1, echo=FALSE}
 # Extract QC values from query and compare with reference
 reference_file <- openMSfile(paste(REFERENCE, '.mzML', sep=''))
 query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
@@ -288,7 +291,7 @@ system('echo 1 > ms1.result')
 
 [//]: # (7. MS2. PSMs and mass error will be used for quality)
 
-```{r MS2 echo=FALSE}
+```{r MS2, echo=FALSE}
 # good (1)= PSMs within 20% of reference
 # marginal (2)= PSMs within 50% of reference
 # bad (3) = PSMs more than 50% of reference
@@ -301,7 +304,7 @@ system('echo 1 > ms2.result')
 
 [//]: # (8. Call errors. If query_ids is empty then write all 5 .result files with 4.)
 
-```{r Error Call echo=FALSE}
+```{r Error Call, echo=FALSE}
 # system('echo 4 > sample.result')
 # system('echo 4 > LC.result')
 # system('echo 4 > source.result')

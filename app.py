@@ -4,6 +4,7 @@ import json
 from flask import Flask, Blueprint, abort, jsonify, request, session, send_from_directory, url_for
 import settings
 from celery import Celery
+from celery import states
 import urllib.parse
 import logging
 import os
@@ -32,7 +33,7 @@ def make_celery(app):
     celery.conf.update(app.config)
     TaskBase = celery.Task
     class ContextTask(TaskBase):
-        abstract = True
+        abstract = True 
         def __call__(self, *args, **kwargs):
             with app.app_context():
                 return TaskBase.__call__(self, *args, **kwargs)
@@ -46,24 +47,57 @@ def glob_ctime_sort(path):
     files.sort(key=os.path.getctime)
     return files
 
-def get_url(task_id,html_prefix):
-    print(task_id)
+def get_status(task_id):
+    return str(run_all_task.AsyncResult(task_id).state)
+
+@app.route('/result/<task_id>/<html_prefix>')
+def result(task_id,html_prefix):
     state = run_all_task.AsyncResult(task_id).state
+    print(html_prefix)
     if state == 'PENDING':
-        return url_for('not_started')
+        return not_started()
+    elif state in states.EXCEPTION_STATES:
+        return error()
     try:
         output_files = run_all_task.AsyncResult(task_id).get(timeout=1.0)
     except:
-        return url_for('running')
+        return running()
     
     file = output_files[html_prefix]
-    return url_for('view_results',path=urllib.parse.quote(file, safe=''))
+    return view_results(path=urllib.parse.quote(file, safe=''))
 
-@app.route('/not_started')
+def get_info(work_dir):
+    if work_dir == None:
+        # Route to serve the upload form
+        work_dir = tempfile.mkdtemp(prefix="qc_benchmarker_",dir=app.config["OUTPUT_DIR"]).replace(app.config["OUTPUT_DIR"],"")
+    raw_files = [file.split('/')[-1].replace(".raw","") for file in glob_ctime_sort("%s%s/*.raw"%(app.config["OUTPUT_DIR"],work_dir))]
+    result_files = glob_ctime_sort("%s%s/*.result"%(app.config["OUTPUT_DIR"],work_dir))
+    status_result_files = {}
+    id_result_files = {}
+    submethods = []
+    for file_to_render in app.config["FILES_TO_RENDER"]:
+        submethods.append(file_to_render.replace(".Rmd",""))
+    for i,result_file in enumerate(result_files):
+        context = json.loads(open(result_file).read())
+        if "method" in context:
+            status_result_files[context["raw_file"]] = get_status(context["id"])
+            id_result_files[context["raw_file"]] = context["id"]
+    for raw_file in raw_files:
+        if raw_file not in id_result_files:
+            status_result_files[raw_file] = get_status("NOID")
+            id_result_files[raw_file] = "NOID"
+    return {"work_dir":work_dir,"raw_files":raw_files,"status_result_files":status_result_files,"id_result_files":id_result_files,"submethods":submethods}
+
+@app.route('/info/<work_dir>')
+def info(work_dir):
+    return jsonify(get_info(work_dir))
+
 def not_started():
     return render_template('not_started.html') 
 
-@app.route('/running')
+def error():
+    return render_template('error.html') 
+
 def running():
     return render_template('running.html') 
 
@@ -83,48 +117,19 @@ def disclaimer():
 def privacy():
     return render_template('privacy.html') 
 
+
 @app.route('/index/')
 @app.route('/index/<work_dir>')
 def index(work_dir=None):
-    if work_dir == None:
-        # Route to serve the upload form
-        work_dir = tempfile.mkdtemp(prefix="qc_benchmarker_",dir=app.config["OUTPUT_DIR"]).replace(app.config["OUTPUT_DIR"],"")
-    raw_files = [file.split('/')[-1].replace(".raw","") for file in glob_ctime_sort("%s%s/*.raw"%(app.config["OUTPUT_DIR"],work_dir))]
-    result_files = glob_ctime_sort("%s%s/*.result"%(app.config["OUTPUT_DIR"],work_dir))
-    valid_result_files = {}
-    id_result_files = {}
-    submethods = []
-    for file_to_render in app.config["FILES_TO_RENDER"]:
-        submethods.append(file_to_render.replace(".Rmd",""))
-    for i,result_file in enumerate(result_files):
-        try:
-            context = json.loads(open(result_file).read())
-            if context["raw_file"] not in valid_result_files:
-                valid_result_files[context["raw_file"]] = {}
-                id_result_files[context["raw_file"]] = {}
-        except:
-            print("Invalid json in %s"%result_file)
-            continue
-        if "method" in context:
-            for submethod in submethods:
-                valid_result_files[context["raw_file"]][submethod] = get_url(context["id"],submethod)
-                id_result_files[context["raw_file"]][submethod] = context["id"]
-    for raw_file in raw_files:
-        if raw_file not in valid_result_files:
-            valid_result_files[raw_file] = {}
-            id_result_files[raw_file] = {}
-            for submethod in submethods:
-                valid_result_files[raw_file][submethod] = get_url("NOID",submethod)
-                id_result_files[raw_file][submethod] = "NOID"
-    print(valid_result_files)
+    myinfo = get_info(work_dir) 
     return render_template('index.html',
                            page_name='QC Benchmarker',
                            project_name="qc-benchmarker",
-                           work_dir=work_dir,
-                           raw_files=raw_files,
-                           result_files=valid_result_files,
-                           id_result_files=id_result_files,
-                           submethods=submethods
+                           work_dir=myinfo["work_dir"],
+                           raw_files=myinfo["raw_files"],
+                           status_result_files=myinfo["status_result_files"],
+                           id_result_files=myinfo["id_result_files"],
+                           submethods=myinfo["submethods"]
                           )
 
 @app.route('/upload', methods=['POST'])
@@ -174,19 +179,20 @@ def run_all_task(output_dir,work_dir,raw_file):
     output_dir = "%s%s/%s"%(output_dir,work_dir,run_all_task.request.id)
     os.mkdir(output_dir)
     output_files = {}
-    #try:
     prefix_cmd = "cd %s; R -e 'OUTPUT_DIR=\"%s\"; QUERY=\"%s\";"%(output_dir,output_dir,raw_file)
         
+    open("%s/run_all_task.log"%output_dir,"w").write("Stdout and Stderr of commands that are run")
     for file_to_render in app.config["FILES_TO_RENDER"]:
+            open("%s/run_all_task.log"%output_dir,"a").write(file_to_render)
             submethod=file_to_render.replace(".Rmd","")
             output_file =  "%s.html"%submethod
             output_files[output_file.replace(".html","")] = "%s/%s"%(output_dir,output_file)
             render_cmd = " rmarkdown::render(\"/data/qc-benchmarker/%s.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(submethod,output_dir,output_file)
-            cmd = prefix_cmd+render_cmd
-            subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
-    #except:
-    #    print("Error while running: %s"%cmd)
-    print(output_files)
+            log_cmd = " >>%s/run_all_task.log 2>&1"%output_dir
+            cmd = prefix_cmd+render_cmd+log_cmd
+            r = os.system(cmd)
+            if r != 0:
+                raise Exception("Error code %d while running command '%s'"%(r,cmd)) 
     return output_files          
                       
 @app.route("/run/<method>/<raw_file>", methods=['POST'])
@@ -197,12 +203,11 @@ def run(method,raw_file):
     if method == "run_all":
         res = run_all_task.delay(app.config["OUTPUT_DIR"],work_dir,raw_file)
     else:
-        raise "'%s' method not found"%method
+        raise Exception("'%s' method not found"%method)
     context = {"id": res.task_id, "method": method, "raw_file": raw_file}
     open("%s%s/%s.result"%(app.config["OUTPUT_DIR"],work_dir,res.task_id),"w").write(json.dumps(context, indent=4))
     return jsonify(context)
 
-@app.route('/view_results/<path>')
 def view_results(path):
     path=urllib.parse.unquote(path)
     work_dir = "/".join(path.split("/")[0:-1])

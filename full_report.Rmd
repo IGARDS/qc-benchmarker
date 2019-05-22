@@ -44,7 +44,7 @@ mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')
 Then we convert the raw file to mzML:
 
 ```{r Msconvert, eval=TRUE}
-system(paste('wine msconvert', paste(OUTPUT_DIR,'/../',QUERY,'.raw',sep=''),'-v --mzML -o',OUTPUT_DIR))
+#system(paste('wine msconvert', paste(OUTPUT_DIR,'/../',QUERY,'.raw',sep=''),'-v --mzML -o',OUTPUT_DIR))
 ```
 
 ### 3. Look up instrument manufacturer and model from query mzML file

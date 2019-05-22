@@ -1,1 +1,1 @@
-celery -A app.celery worker 
+celery -A app.celery worker  --concurrency 1

@@ -71,6 +71,32 @@
     
 </head>
 <body>
+    
+<script>
+makePostCall = function (url, data) { // here the data and url are not hardcoded anymore
+   var json_data = JSON.stringify(data);
+
+    return $.ajax({
+        type: "POST",
+        url: url,
+        data: json_data,
+        dataType: "json",
+        contentType: "application/json;charset=utf-8"
+    });
+}
+    
+makeGetCall = function (url, data) { // here the data and url are not hardcoded anymore
+   var json_data = JSON.stringify(data);
+
+    return $.ajax({
+        type: "GET",
+        url: url,
+        data: json_data,
+        dataType: "json",
+        contentType: "application/json;charset=utf-8"
+    });
+}
+</script>
 
 <center>
 <div id="parent">
@@ -96,7 +122,39 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
         document.getElementById('save_url').innerHTML = document.URL
     }
 </script>
+    
+<script>
+        var myVar = setInterval(update_data, 1000);
+    
+        function update_button(submethod,raw_file,tid) {
+            $( "#"+submethod+"_"+raw_file ).click(function() {$("#iframe_results").attr("src", "/result/"+tid+"/"+submethod)});
+        }
 
+        function update_data() {
+            var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
+            makeGetCall("/info/{{ work_dir }}", {})
+                .then(function successCallback(response) {
+                    // this callback will be called asynchronously
+                    // when the response is available
+                    var i;
+                    for (i = 0; i < response['raw_files'].length; i++) {
+                        var raw_file = response['raw_files'][i];
+                        var tid = response['id_result_files'][raw_file];
+                        for (j = 0; j < response['submethods'].length; j++) {
+                            var submethod = response['submethods'][j];
+                            update_button(submethod,raw_file,tid);
+                        }
+                    }
+                    console.log(response);
+                    //$( "#click_refresh_raw_files" ).click()
+                }, function errorCallback(response) {
+                   // called asynchronously if an error occurs
+                   // or server returns response with an error status.
+                    alert("Something went wrong!")
+                });
+        }
+</script>
+    
 <form method="POST" action='/upload' class="dropzone dz-clickable" 
       id="dropper" enctype="multipart/form-data">
     <input type="hidden" id="work_dir" name="work_dir" value="{{ work_dir }}">
@@ -121,38 +179,16 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
     <h3>{{ raw_file }}</h3>
     <div class="btn-group">
       {% for submethod in submethods %}
-          <button id='{{ submethod }}_{{ raw_file }}'>{{ submethod }}</button>
-      {% endfor %}
+          <button type="button" id='{{ submethod }}_{{ raw_file }}' >
+              {{ submethod }}
+          </button>
+    {% endfor %}
     <button id='rerun_{{ raw_file }}'>rerun</button>
     </div>
 {% endfor %}
-   
-<script>
-makePostCall = function (url, data) { // here the data and url are not hardcoded anymore
-   var json_data = JSON.stringify(data);
-
-    return $.ajax({
-        type: "POST",
-        url: url,
-        data: json_data,
-        dataType: "json",
-        contentType: "application/json;charset=utf-8"
-    });
-}
-</script>
+</div>
     
 {% for raw_file in raw_files %}
-    {% for submethod in submethods %}
-        <script>
-        if ("{{ result_files[raw_file][submethod] }}".includes("{{ submethod }}")) {
-            $("#{{ submethod }}_{{ raw_file }}").css('background-color','#3e8e41');
-        }
-        $( "#{{ submethod }}_{{ raw_file }}" ).click(function() {
-            $("#iframe_results").attr('src', "{{ result_files[raw_file][submethod] }}")
-        })
-        </script>
-    {% endfor %}
-    
     <script>
     $( "#rerun_{{ raw_file }}" ).click(function() {
         var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
@@ -160,8 +196,8 @@ makePostCall = function (url, data) { // here the data and url are not hardcoded
         .then(function successCallback(response) {
            // this callback will be called asynchronously
            // when the response is available
-            console.log(response)
-            $( "#click_refresh_raw_files" ).click()
+            console.log(response);
+           //$( "#click_refresh_raw_files" ).click()
         }, function errorCallback(response) {
            // called asynchronously if an error occurs
            // or server returns response with an error status.
@@ -169,23 +205,17 @@ makePostCall = function (url, data) { // here the data and url are not hardcoded
         })
     });
     </script>
-    
 {% endfor %}
-</div>
 
 <div class="btn-group">
 <form>
-<button id='click_refresh_raw_files'>Click to Refresh</button>
+<button id='click_refresh_raw_files' type="button">Click to Refresh</button>
 </form>
 </div>
    
 <script>
 $( "#click_refresh_raw_files" ).click(function() {
-  if (document.URL.includes("{{ work_dir }}")) {
-      $( "#raw_files_list" ).load(document.URL +  ' #raw_files_list');
-  } else {
-      $( "#raw_files_list" ).load(document.URL+"{{ work_dir }}" +  ' #raw_files_list');
-  }
+  $( "#raw_files_list" ).load("/index/{{ work_dir }}" +  ' #raw_files_list');
 });
 </script>
     

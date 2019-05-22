@@ -34,6 +34,7 @@ R -e 'install.packages("Rcpp", repos="http://cran.us.r-project.org")'
 R -e 'install.packages("plyr", repos="http://cran.us.r-project.org")'
 R -e 'install.packages("rshape2", repos="http://cran.us.r-project.org")'
 R -e 'install.packages("ggplot2", repos="http://cran.us.r-project.org")'
+R -e 'BiocManager::install("MSnbase")'
 
 #R -e 'library("rmarkdown"); render("/data/qc-benchmarker/qc_pipeline.Rmd","html_document")'
 
