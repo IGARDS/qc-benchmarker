@@ -30,7 +30,7 @@ library(ggplot2)
 
 [//]: # (1. Call reference files, process QUERY, write .result files. In future iterations will perform lite search to determine if HeLa, yeast or E. coli)
 
-```{r Import, process and write files, echo=FALSE}
+```{r Setup, echo=FALSE}
 DATA_DIR <- '/data/qc-benchmarker-data/'
 REFERENCE <- paste('2018-10-15_HeLa_OTOT',sep='')   # reference name for later use with different file types
 AMOUNT_INJECTED <- 200                                       # ng HeLa injected (reference)
@@ -119,7 +119,7 @@ if((100*sum(query_TIC)/sum(reference_TIC)) < 50){
 
 [//]: # (4. LC; Estimate peak capacity. Calculate peak capacity as defined in QuiC or ID-free?)
 
-```{r LC echo=FALSE}
+```{r LC, echo=FALSE}
 query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
 query_BPC <- chromatogram(query, aggregationFun = "max")
 
@@ -250,7 +250,7 @@ system('echo 1 > source.result')
 
 [//]: # (5. Source. Compare signal stability)
 
-```{r Source echo=FALSE}
+```{r Source, echo=FALSE}
 # query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # already did this for LC section
 query_TIC <- chromatogram(query, aggregationFun = "sum")
 
@@ -278,7 +278,7 @@ if((query_cor) < 0.5){
 
 [//]: # (6. MS1. TIC and mass error can be used for quality judgement)
 
-```{r MS1 echo=FALSE}
+```{r MS1, echo=FALSE}
 # Extract QC values from query and compare with reference
 
 # the following was performed for sample section
@@ -305,7 +305,7 @@ system('echo 1 > ms1.result')
 
 [//]: # (7. MS2. PSMs and mass error will be used for quality)
 
-```{r MS2 echo=FALSE}
+```{r MS2, echo=FALSE}
 PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 
 if((100*nrow(psms(reference_ids))/nrow(psms(query_ids))) < 50){
@@ -322,7 +322,7 @@ if((100*nrow(psms(reference_ids))/nrow(psms(query_ids))) < 50){
 
 [//]: # (8. Call errors. If query_ids is empty then write all 5 .result files with 4.)
 
-```{r Error Call echo=FALSE}
+```{r Error Call, echo=FALSE}
 if(nrow(psms(query_ids)) < 1){
   system('echo 4 > sample.result')
   system('echo 4 > LC.result')
