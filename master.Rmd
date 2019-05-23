@@ -91,12 +91,12 @@ PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 reference_file <- openMSfile(paste(DATA_DIR, REFERENCE, '.mzML', sep=''))
 # query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))      # we already read this in at the start
 
-reference_TIC <- tic(reference_file)
-query_TIC <- tic(query_file)
+reference_TIC_load <- tic(reference_file)       # since we only use this to estimate load call _load
+query_TIC_load <- tic(query_file)
 
-cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of reference.',
+cat('Query TIC total area ', 100*sum(query_TIC_load)/sum(reference_TIC_load), '% of reference.',
     sep='')
-cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC)/sum(reference_TIC), ' ng.',
+cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC_load)/sum(reference_TIC_load), ' ng.',
     sep='')
 
 # would like to use matched spectra as well in quality
@@ -122,8 +122,12 @@ if((100*sum(query_TIC)/sum(reference_TIC)) < 50){
 ```{r LC, echo=FALSE}
 query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
 query_BPC <- chromatogram(query, aggregationFun = "max")
+query_TIC <- chromatogram(query, aggregationFun = "sum") # is for later, but this way we can remove query object
 
+rm(query) # clean up
+gc()
 
+# first calculate peak width with lag 1 and theoretical peak capacity
 x <- as.numeric(query_BPC[1,1]@rtime)
 y <- as.numeric(query_BPC[1,1]@intensity)
 
@@ -146,9 +150,9 @@ cat('Mean peak width (FWHM equivalent) =', signif(peak_width, digits=4), "second
 gradient_length <- 120*60 # in seconds
 cat('Theor. peak capacity =', signif(gradient_length/peak_width, digits=4))
 
+
 # Look at retention coeffecients
 # Here we train a linear model (Palmblad *et al*., 2002) for predicting retention times, and compare the amino acid coefficients of the query model with those from the reference model. This will reveal changes in mobile phase composition, such as ionic strength or pH. The training is here done with R packages.
-
 peptides <-c(); RTs <- c()
 psms <- xmlToList(paste(tolower(QUERY), '.interact.pep.xml', sep=''))
 for (i in seq(5,length(psms$msms_run_summary)-1)) {
@@ -239,12 +243,38 @@ plot(reference_coeffs[1:21], query_coeffs[1:21], pch=19, cex=2.5,
 
 abline(a=0, b=1, lty=2)
 
-# good (1)= peak capacity of >300 and slope of coeffecients is within 20% of 1 (45-degree diagonal)
-# marginal (2)= peak capacity of 200-300 and slope of coeffecients is within 50-20% of 1 (45-degree diagonal)
-# bad (3) = peak capacity of <200 and slope of coeffecients is within >50% of 1 (45-degree diagonal)
+coeffs_model <- lm(query_coeffs~reference_coeffs)
+slp <-  coef(coeffs_model)[2]
 
-# for now will call good
-system('echo 1 > source.result')
+
+# need to write lowest quality so make score and take worst (1 good, 2 marginal, 3 bad)
+
+# score based on peak capacity
+signif(gradient_length/peak_width)
+if((gradient_length/peak_width) < 200){
+  peak_capacity_qual <- 3
+} else if ((gradient_length/peak_width) < 300){
+  peak_capacity_qual <- 2
+} else {
+  peak_capacity_qual <- 1
+}
+
+# score based on slp
+if(abs(slp-1) > 0.2){
+  coeff_qual <- 3
+} else if (abs(slp-1) > 0.1){
+  coeff_qual <- 2
+} else {
+  coeff_qual <- 1
+}
+
+# take highest score (higher is more bad)
+if(peak_capacity_qual > coeff_qual){
+  system(paste('echo ', peak_capacity_qual,' > lc.result', sep = ''))
+} else {
+  system(paste('echo ', coeff_qual,' > lc.result', sep = ''))
+}
+
 ```
 
 
@@ -252,10 +282,14 @@ system('echo 1 > source.result')
 
 ```{r Source, echo=FALSE}
 # query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # already did this for LC section
-query_TIC <- chromatogram(query, aggregationFun = "sum")
+# query_TIC <- chromatogram(query, aggregationFun = "sum") # moved to LC section
 
 reference <- readMSData(paste(DATA_DIR, REFERENCE, '.mzML', sep=''), msLevel = 1)
 reference_TIC <- chromatogram(reference, aggregationFun = "sum")
+
+rm(reference) # need to clean up this file
+gc()
+
 
 x <- as.numeric(query_TIC[1,1]@intensity)
 query_cor <- cor(x[-length(x)],x[-1])
