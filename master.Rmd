@@ -120,12 +120,9 @@ if((100*sum(query_TIC)/sum(reference_TIC)) < 50){
 [//]: # (4. LC; Estimate peak capacity. Calculate peak capacity as defined in QuiC or ID-free?)
 
 ```{r LC, echo=FALSE}
-query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # works, but quite slow...
+query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1, mode=c("onDisk")) # default is not onDisk, but this seems to avoid memory issue and is faster
 query_BPC <- chromatogram(query, aggregationFun = "max")
-query_TIC <- chromatogram(query, aggregationFun = "sum") # is for later, but this way we can remove query object
 
-rm(query) # clean up
-gc()
 
 # first calculate peak width with lag 1 and theoretical peak capacity
 x <- as.numeric(query_BPC[1,1]@rtime)
@@ -282,15 +279,13 @@ if(peak_capacity_qual > coeff_qual){
 
 ```{r Source, echo=FALSE}
 # query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # already did this for LC section
-# query_TIC <- chromatogram(query, aggregationFun = "sum") # moved to LC section
+query_TIC <- chromatogram(query, aggregationFun = "sum") # moved to LC section
 
-reference <- readMSData(paste(DATA_DIR, REFERENCE, '.mzML', sep=''), msLevel = 1)
+reference <- readMSData(paste(DATA_DIR, REFERENCE, '.mzML', sep=''), msLevel = 1, mode=c("onDisk"))
 reference_TIC <- chromatogram(reference, aggregationFun = "sum")
 
-rm(reference) # need to clean up this file
-gc()
 
-
+# determine signal stability with lag-1 autocorrelation
 x <- as.numeric(query_TIC[1,1]@intensity)
 query_cor <- cor(x[-length(x)],x[-1])
 x <- as.numeric(reference_TIC[1,1]@intensity)
