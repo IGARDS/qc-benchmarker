@@ -24,6 +24,7 @@ library(scales)
 library(XML)
 library(pepXMLTab)
 library(ggplot2)
+
 ```
 
 
@@ -56,6 +57,7 @@ system('echo 0 > lc.result')
 system('echo 0 > source.result')
 system('echo 0 > ms1.result')
 system('echo 0 > ms2.result')
+
 ```
 
 
@@ -81,6 +83,7 @@ query_ids <- openIDfile(paste(QUERY, '.mzid', sep=''))
 PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 
 # if query_ids is empty then write all 5 .result files with 4, but place this condition at the end of this file
+
 ```
 
 
@@ -121,7 +124,7 @@ if((100*sum(query_TIC)/sum(reference_TIC)) < 50){
 
 ```{r LC, echo=FALSE}
 query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1, mode=c("onDisk")) # default is not onDisk, but this seems to avoid memory issue and is faster
-query_BPC <- chromatogram(query, aggregationFun = "max")
+query_BPC <- chromatogram(query, aggregationFun = "max")  # this is 10x slower with onDisk object, but, memory returns to normal after
 
 
 # first calculate peak width with lag 1 and theoretical peak capacity
@@ -279,7 +282,7 @@ if(peak_capacity_qual > coeff_qual){
 
 ```{r Source, echo=FALSE}
 # query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # already did this for LC section
-query_TIC <- chromatogram(query, aggregationFun = "sum") # moved to LC section
+query_TIC <- chromatogram(query, aggregationFun = "sum")
 
 reference <- readMSData(paste(DATA_DIR, REFERENCE, '.mzML', sep=''), msLevel = 1, mode=c("onDisk"))
 reference_TIC <- chromatogram(reference, aggregationFun = "sum")
@@ -328,6 +331,7 @@ cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of refere
 
 # for now will call good
 system('echo 1 > ms1.result')
+
 ```
 
 
