@@ -3,7 +3,7 @@ title: "LC QC Report"
 output:
   html_document: default
   pdf_document: default
-date version: May 10, 2019
+date version: May 22, 2019
 ---
 
 [//]: # (This sub-report contains metrics related to the performance of LC system components. Metrics include estimated pH of mobile phases, column heater, shape of gradient, peak shape statistics (such as FWHM for 25, 50 and 75% quartiles and base peak width). Future work will include determining % TIC that is polysiloxane or detergents in order to evaluate column health and system contamination. This sub-report assumes the MS2.Rmd has been run first so that the files are available.)

@@ -64,15 +64,15 @@ system('echo 0 > ms2.result')
 
 ```{r Searching, echo=FALSE}
 # Perform SpectraST search
-system(paste('spectrast -sL', SPECTRAST_LIBRARY, ' -sD', FASTA_FILE,
+system(paste('wine spectrast -sL', SPECTRAST_LIBRARY, ' -sD', FASTA_FILE,
              ' -sTAA -sA! -s_HOM4 -sR! -sEpep.xml ', QUERY, '.mzML', sep = ''))
-system(paste('xinteract -N', sub('$', '.interact.pep.xml', QUERY), 
+system(paste('wine xinteract -N', sub('$', '.interact.pep.xml', QUERY), 
              ' -p0.95 -l7 -PPM -O -D', FASTA_FILE, ' ', QUERY, '.pep.xml', sep = ''))
 
 # Extract QC values from SpectraST search
 # use already processed reference file
-system(paste('idconvert ', DATA_DIR, REFERENCE, '.interact.pep.xml',sep='')) 
-system(paste('idconvert ', QUERY, '.interact.pep.xml', sep='')) 
+system(paste('wine idconvert ', DATA_DIR, REFERENCE, '.interact.pep.xml',sep='')) 
+system(paste('wine idconvert ', QUERY, '.interact.pep.xml', sep='')) 
 
 # not sure if the mzid is created in working_dir or in oridinal xml location on DATA_DIR
 reference_ids <- openIDfile(paste(DATA_DIR, REFERENCE, '.mzid', sep=''))
