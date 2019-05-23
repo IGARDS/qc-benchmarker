@@ -193,7 +193,7 @@ fit <- lm(ZRTs ~ nA+nR+nN+nD+nC+nE+nQ+nG+nH+nI+nL+nK+nM+nF+nP+nS+nT+nW+nY+nV)
 query_coeffs <- as.vector(coefficients(fit))
 
 peptides <-c(); RTs <- c()
-psms <- xmlToList(paste(tolower(REFERENCE), '.interact.pep.xml', sep=''))
+psms <- xmlToList(paste(DATA_DIR, REFERENCE, '.interact.pep.xml', sep=''))
 for (i in seq(5,length(psms$msms_run_summary)-1)) {
     peptides <- c(peptides,as.character(psms$msms_run_summary[i]$spectrum_query$search_result$search_hit$.attrs['peptide']))
     RTs <- c(RTs,as.numeric(psms$msms_run_summary[i]$spectrum_query$.attrs['retention_time_sec']))
