@@ -51,7 +51,7 @@ hist(1e6*mz_error[abs(mz_error)<0.05]/mz[abs(mz_error)<0.05], breaks = 1000, mai
 
 
 ```{r Plot error v m/z, eval=TRUE, echo=FALSE}
-plot(mz, 1e6*mz_error/mz, col=alpha('blue', 2), pch='.', ylim = c(-10,10), xlab='AvePrecursorMz', ylab='MassDiff (in ppm)')
+plot(mz, 1e6*mz_error/mz, col=alpha('blue', 1), pch='.', ylim = c(-10,10), xlab='AvePrecursorMz', ylab='MassDiff (in ppm)')
 
 ```
 \begin{center}Figure 3: ppm error with m/z.\end{center}
