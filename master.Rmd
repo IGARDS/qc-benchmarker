@@ -3,7 +3,7 @@ title: "Master Pipeline"
 output:
   html_document: default
   pdf_document: default
-date version: May 16, 2019
+date version: May 24, 2019
 ---
 
 [//]: # (This file is meant to run all processing once the query has been uploaded. It is an .Rmd, but will not be used for display. The primary function is to perform file conversion and searching, with results kept in the workspace for ensuing .Rmd files to use when generating reports. Also we will write 5 .result files to be used to retrieve graphics displayed in middle iframe. These will have a value of 0, 1, 2, 3, or 4.  
@@ -123,8 +123,8 @@ if((100*sum(query_TIC)/sum(reference_TIC)) < 50){
 [//]: # (4. LC; Estimate peak capacity. Calculate peak capacity as defined in QuiC or ID-free?)
 
 ```{r LC, echo=FALSE}
-query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1, mode=c("onDisk")) # default is not onDisk, but this seems to avoid memory issue and is faster
-query_BPC <- chromatogram(query, aggregationFun = "max")  # this is 10x slower with onDisk object, but, memory returns to normal after
+query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # default is not onDisk, but this seems to avoid memory issue and is faster, but it makes the chromatogram() super slow
+query_BPC <- chromatogram(query, aggregationFun = "max") 
 
 
 # first calculate peak width with lag 1 and theoretical peak capacity
@@ -284,7 +284,7 @@ if(peak_capacity_qual > coeff_qual){
 # query <- readMSData(paste(QUERY, '.mzML', sep=''), msLevel = 1) # already did this for LC section
 query_TIC <- chromatogram(query, aggregationFun = "sum")
 
-reference <- readMSData(paste(DATA_DIR, REFERENCE, '.mzML', sep=''), msLevel = 1, mode=c("onDisk"))
+reference <- readMSData(paste(DATA_DIR, REFERENCE, '.mzML', sep=''), msLevel = 1)
 reference_TIC <- chromatogram(reference, aggregationFun = "sum")
 
 
@@ -324,6 +324,14 @@ cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of refere
     sep='')
 # cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC)/sum(reference_TIC), ' ng.',
 #    sep='')
+
+
+# determine mass error using experimental m/z versus calculated m/z of identified PSMs
+
+query_psms <- psms(query_ids)
+ms1Error_ppm_query <- mean((abs(query_psms[,5]-query_psms[,6])/query_psms[,6])*1000000)
+
+cat('Average MS1 mass error: ', ms1Error_ppm_query, ' ppm.', sep='')
 
 # good (1)= TIC within 20% of reference
 # marginal (2)= TIC within 50% of reference
