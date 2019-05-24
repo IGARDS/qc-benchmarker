@@ -326,19 +326,28 @@ cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of refere
 #    sep='')
 
 
-# determine mass error using experimental m/z versus calculated m/z of identified PSMs
+# determine mass error using experimental m/z versus calculated m/z of identified PSMs. Since the library was constructed using isotope correction, there are calculated masses that are using monoisotopic, though this was not selected, therefore only m/z differences less than 0.1 were used for these calculations.
 
-query_psms <- psms(query_ids)
-ms1Error_ppm_query <- mean((abs(query_psms[,5]-query_psms[,6])/query_psms[,6])*1000000)
+A <- psms(query_ids)
+mz_error <- A[,5]-A[,6]
+mz <- A[,6]
+z <- A[,2]
+mean_mz_error <- mean(mz_error[abs(mz_error)<0.1]/mz[abs(mz_error)<0.1])
 
-cat('Average MS1 mass error: ', ms1Error_ppm_query, ' ppm.', sep='')
+hist(1e6*mz_error[abs(mz_error)<0.05]/mz[abs(mz_error)<0.05], breaks = 1000, main = 'ppm error', xlab = 'ppm', xlim = c(-25,25) )
 
-# good (1)= TIC within 20% of reference
-# marginal (2)= TIC within 50% of reference
-# bad (3) = TIC more than 50% of reference
+plot(mz, 1e6*mz_error/mz, col=alpha('blue', 2), pch='.', ylim = c(-10,10), xlab='AvePrecursorMz', ylab='MassDiff (in ppm)')
 
-# for now will call good
-system('echo 1 > ms1.result')
+cat('Average MS1 mass error: ', signif(1e6*mean_mz_error, digits=2), ' ppm.', sep='')
+
+# make quality call using mass error. Should be based on instrument type
+if((abs(1e6*mean_mz_error)) > 15){
+  system('echo 3 > ms2.result')
+} else if ((abs(1e6*mean_mz_error)) > 10){
+  system('echo 2 > ms2.result')
+} else {
+  system('echo 1 > ms2.result')
+}
 
 ```
 
@@ -350,11 +359,11 @@ system('echo 1 > ms1.result')
 PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 
 if((100*nrow(psms(reference_ids))/nrow(psms(query_ids))) < 50){
-  shell('echo 3 > ms2.result')
+  system('echo 3 > ms2.result')
 } else if ((100*nrow(psms(reference_ids))/nrow(psms(query_ids))) < 80){
-  shell('echo 2 > ms2.result')
+  system('echo 2 > ms2.result')
 } else {
-  shell('echo 1 > ms2.result')
+  system('echo 1 > ms2.result')
 }
 
 ```
