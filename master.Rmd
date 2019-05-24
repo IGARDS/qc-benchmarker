@@ -336,7 +336,7 @@ mean_mz_error <- mean(mz_error[abs(mz_error)<0.1]/mz[abs(mz_error)<0.1])
 
 hist(1e6*mz_error[abs(mz_error)<0.05]/mz[abs(mz_error)<0.05], breaks = 1000, main = 'ppm error', xlab = 'ppm', xlim = c(-25,25) )
 
-plot(mz, 1e6*mz_error/mz, col=alpha('blue', 2), pch='.', ylim = c(-10,10), xlab='AvePrecursorMz', ylab='MassDiff (in ppm)')
+plot(mz, 1e6*mz_error/mz, col=alpha('blue', 1), pch='.', ylim = c(-10,10), xlab='AvePrecursorMz', ylab='MassDiff (in ppm)')
 
 cat('Average MS1 mass error: ', signif(1e6*mean_mz_error, digits=2), ' ppm.', sep='')
 
