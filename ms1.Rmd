@@ -44,7 +44,7 @@ lines(query_TIC_load[,1], query_TIC_load[,2], type="h", lwd=1, col='blue')
 ```{r Calculate average mass error using PSMs, , eval=TRUE, echo=FALSE}
 cat('Average MS1 mass error: ', signif(1e6*mean_mz_error, digits=2), ' ppm.', sep='')
 
-hist(1e6*mz_error[abs(mz_error)<0.05]/mz[abs(mz_error)<0.05], breaks = 1000, main = 'ppm error', xlab = 'ppm', xlim = c(-25,25) )
+hist(1e6*mz_error[abs(mz_error)<0.10]/mz[abs(mz_error)<0.10], breaks = 2000, main = 'ppm error', xlab = 'ppm', xlim = c(-20,20) )
 
 ```
 \begin{center}Figure 2: ppm error.\end{center}

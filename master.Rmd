@@ -17,7 +17,7 @@ reference related files (.raw, .mzML, and .interact.pep.xml) should be present i
 
 [//]: # (Load R packages)
 
-```{r Setup, echo=FALSE}
+```{r Setup libs, echo=FALSE}
 library(mzR)
 library(MSnbase)
 library(scales)
@@ -31,7 +31,7 @@ library(ggplot2)
 
 [//]: # (1. Call reference files, process QUERY, write .result files. In future iterations will perform lite search to determine if HeLa, yeast or E. coli)
 
-```{r Setup, echo=FALSE}
+```{r Setup files, echo=FALSE}
 DATA_DIR <- '/data/qc-benchmarker-data/'
 REFERENCE <- paste('2018-10-15_HeLa_OTOT',sep='')   # reference name for later use with different file types
 AMOUNT_INJECTED <- 200                                       # ng HeLa injected (reference)
@@ -334,7 +334,7 @@ mz <- A[,6]
 z <- A[,2]
 mean_mz_error <- mean(mz_error[abs(mz_error)<0.1]/mz[abs(mz_error)<0.1])
 
-hist(1e6*mz_error[abs(mz_error)<0.05]/mz[abs(mz_error)<0.05], breaks = 1000, main = 'ppm error', xlab = 'ppm', xlim = c(-25,25) )
+hist(1e6*mz_error[abs(mz_error)<0.10]/mz[abs(mz_error)<0.10], breaks = 2000, main = 'ppm error', xlab = 'ppm', xlim = c(-20,20) )
 
 plot(mz, 1e6*mz_error/mz, col=alpha('blue', 1), pch='.', ylim = c(-10,10), xlab='AvePrecursorMz', ylab='MassDiff (in ppm)')
 
