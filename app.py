@@ -187,12 +187,15 @@ def run_all_task(output_dir,work_dir,raw_file):
             submethod=file_to_render.replace(".Rmd","")
             output_file =  "%s.html"%submethod
             output_files[output_file.replace(".html","")] = "%s/%s"%(output_dir,output_file)
-            render_cmd = " rmarkdown::render(\"/data/qc-benchmarker/%s.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(submethod,output_dir,output_file)
+            render_cmd = " rmarkdown::render(\"/data/qc-benchmarker/%s.Rmd\",output_dir=\"%s\",output_file=\"%s\",knit_root_dir=\"%s\")'"%(submethod,output_dir,output_file,output_dir)
             log_cmd = " >>%s/run_all_task.log 2>&1"%output_dir
             cmd = prefix_cmd+render_cmd+log_cmd
-            r = os.system(cmd)
-            if r != 0:
-                raise Exception("Error code %d while running command '%s'"%(r,cmd)) 
+            try:
+                r = os.system(cmd)
+            except:
+                print("Error running",cmd)
+            #if r != 0:
+            #    raise Exception("Error code %d while running command '%s'"%(r,cmd)) 
     return output_files          
                       
 @app.route("/run/<method>/<raw_file>", methods=['POST'])
