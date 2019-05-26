@@ -116,6 +116,9 @@ if((100*sum(query_TIC)/sum(reference_TIC)) < 50){
   system('echo 1 > sample.result')
 }
 
+# render the sample html_document
+rmarkdown::render("sample.Rmd")
+
 ```
 
 
@@ -275,6 +278,9 @@ if(peak_capacity_qual > coeff_qual){
   system(paste('echo ', coeff_qual,' > lc.result', sep = ''))
 }
 
+# render the LC html_document
+rmarkdown::render("lc.Rmd")
+
 ```
 
 
@@ -304,6 +310,9 @@ if((query_cor) < 0.5){
 } else {
   system('echo 1 > source.result')
 }
+
+# render the source html_document
+rmarkdown::render("source.Rmd")
 
 ```
 
@@ -342,12 +351,15 @@ cat('Average MS1 mass error: ', signif(1e6*mean_mz_error, digits=2), ' ppm.', se
 
 # make quality call using mass error. Should be based on instrument type
 if((abs(1e6*mean_mz_error)) > 15){
-  system('echo 3 > ms2.result')
+  system('echo 3 > ms1.result')
 } else if ((abs(1e6*mean_mz_error)) > 10){
-  system('echo 2 > ms2.result')
+  system('echo 2 > ms1.result')
 } else {
-  system('echo 1 > ms2.result')
+  system('echo 1 > ms1.result')
 }
+
+# render the ms1 html_document
+rmarkdown::render("ms1.Rmd")
 
 ```
 
@@ -366,6 +378,9 @@ if((100*nrow(psms(reference_ids))/nrow(psms(query_ids))) < 50){
   system('echo 1 > ms2.result')
 }
 
+# render the ms2 html_document
+rmarkdown::render("ms2.Rmd")
+
 ```
 
 
@@ -380,4 +395,5 @@ if(nrow(psms(query_ids)) < 1){
   system('echo 4 > ms1.result')
   system('echo 4 > ms2.result')
 }
+
 ```
