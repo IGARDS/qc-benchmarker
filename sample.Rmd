@@ -1,53 +1,46 @@
 ---
-title: "Sample QC"
-date version: "April 24, 2019"
+title: "Sample QC Report"
 output:
   html_document: default
+  pdf_document: default
+date version: May 23, 2019
 ---
 
 This sub-report contains metrics related to QC sample integrity. The QC Benchmarker automatically detects whether the sample was HeLa (Thermo), yeast (Promega) or *E. coli* (Waters) digest. Metrics include estimated sample loading, % spectra matched to sample, and +1 charge states over the gradient. Future work will include determining matches to cRAP/PRIDE contaminants.
 
 
-
-
-```{r Global Options, include=TRUE}
+```{r Global Options, echo=FALSE}
 knitr::opts_chunk$set(fig.width=5, fig.height=5, fig.align='center', warning=FALSE, message=FALSE, error=TRUE)
 options(tinytex.verbose = TRUE)
+```
+
+
+```{r Extract instrumentInfo, eval=TRUE, echo=FALSE}
+cat('Query file is ', make, ' ', model, '.', sep='')   # look up make and model of file for QC    
+```
+
+
+1. Estimate loading
+
+```{r Estimate loading, eval=TRUE, echo=FALSE}
+cat('Query TIC total area ', 100*sum(query_TIC_load)/sum(reference_TIC_load), '% of reference.',
+    sep='')
+
+cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC_load)/sum(reference_TIC_load), ' ng.',
+    sep='')
 
 ```
 
 
-#### 1. Load R packages and specify the search parameters and sequence database
+2. Percent spectra matched
 
-First we load R packages, specify the parameters and sequence database:
-
-```{r Setup}
-library(mzR)
-library(scales)
-
-# Commented out lines must be set before render call
-#QUERY <- '2018-10-18_HeLa_OTOT'                             # query for QC
-#OUTPUT_DIR <- '/tmp/lkjdflkj'
-#MZML_DIR
-
-# The following are hard coded for now
-REFERENCE <- '/data/2018-10-15_HeLa_OTOT'                    # reference (could be local)
-AMOUNT_INJECTED <- 200                                       # ng HeLa injected (reference)
-SPECTRAST_LIBRARY <- '/data/HeLa.splib'                      # HeLa library
-FASTA_FILE <- '/data/up000005640.fasta'                      # sequence database
-mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')
-cat('mzML file is',mzml_file)
-
+```{r percent spectraMatched, eval=TRUE, echo=FALSE}
 
 ```
 
-### 3. Look up instrument manufacturer and model from query mzML file
 
-Here we read in instrument metadata from the mzML file using the [mzR](http://bioconductor.org/packages/release/bioc/html/mzR.html) package. 
+3. Distribution of charge states
 
-```{r Extract instrumentInfo}
-query_file <- openMSfile(mzml_file)
-make <- instrumentInfo(query_file)$manufacturer
-model <- instrumentInfo(query_file)$model
-cat('Query file is', make, model)   # look up make and model of file for QC    
+```{r charge stateDistribution, eval=TRUE, echo=FALSE}
+
 ```

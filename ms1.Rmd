@@ -1,11 +1,12 @@
 ---
 title: "MS1 QC Report"
-date version: "April 26, 2019"
 output:
   html_document: default
+  pdf_document: default
+date version: May 24, 2019
 ---
 
-[//]: # (This sub-report contains metrics related to the performance of the MS1. This includes metrics using results of a SpectraST search blah blah. Metrics include the number of MS1 scans (and average per second), MS1 scan intensity distribution and median, MS1 frequency v retention time, and MS1 mass error.)
+This sub-report contains metrics related to the performance of the MS1. This includes metrics using results of a SpectraST search blah blah. Metrics include the number of MS1 scans (and average per second), MS1 scan intensity distribution and median, MS1 frequency v retention time, and MS1 mass error.
 
 
 ```{r Global Options, echo=FALSE}
@@ -14,58 +15,43 @@ options(tinytex.verbose = TRUE)
 ```
 
 
-[//]: # (1. Load R packages and specify the search parameters and sequence database)
-
-```{r Setup, echo=FALSE}
-library(mzR)
-library(scales)
-library(XML)
-library(pepXMLTab)
-library(ggplot2)
-
-# Commented out lines must be set before render call
-QUERY <- '2018-10-18_HeLa_OTOT'                             # query for QC
-#OUTPUT_DIR <- '/tmp/lkjdflkj'
-MZML_DIR <- 'C:/TPP/data/Ben'
-
-# The following are hard coded for now
-REFERENCE <- '2018-10-15_HeLa_OTOT'                          # reference (could be local)
-AMOUNT_INJECTED <- 200                                       # ng HeLa injected (reference)
-SPECTRAST_LIBRARY <- '/data/HeLa.splib'                      # HeLa library
-FASTA_FILE <- '/data/up000005640.fasta'                      # sequence database
-mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')
-# cat('mzML file is',mzml_file)
-```
-
-[//]: # (2. Look up instrument manufacturer and model from query mzML file)
-
-[//]: # (Here we read in instrument metadata from the mzML file using the mzR package) 
-
-```{r Extract instrumentInfo, echo=FALSE}
-query_file <- openMSfile(mzml_file)
-make <- instrumentInfo(query_file)$manufacturer
-model <- instrumentInfo(query_file)$model
+```{r Extract instrumentInfo, eval=TRUE, echo=FALSE}
 cat('Query file is ', make, ' ', model, '.', sep='')   # look up make and model of file for QC    
 ```
 
-[//]: # (3. Extract QC values from query and compare with reference)
 
-[//]: # (Here we extract and plot the TICs from the mzML files:)
+Extract QC values from query
 
-```{r Extract TICs, echo=FALSE}
-reference_file <- openMSfile(paste(REFERENCE, '.mzML', sep=''))
-query_file <- openMSfile(paste(QUERY, '.mzML', sep=''))
+Here we extract and plot the TICs from the mzML files:
 
-reference_TIC <- tic(reference_file)
-query_TIC <- tic(query_file)
+```{r Extract TICs, eval=TRUE, echo=FALSE}
 
-cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of reference.',
+cat('Query TIC total area ', 100*sum(query_TIC_load)/sum(reference_TIC_load), '% of reference.',
     sep='')
-cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC)/sum(reference_TIC), ' ng.',
+cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC_load)/sum(reference_TIC_load), ' ng.',
     sep='')
 
-plot(reference_TIC[,1], reference_TIC[,2], type="h", lwd=1, col='green', 
+plot(reference_TIC_load[,1], reference_TIC_load[,2], type="h", lwd=1, col='green', 
      xlab='retention time (min)', ylab='total ion current')
-lines(query_TIC[,1], query_TIC[,2], type="h", lwd=1, col='blue')
+lines(query_TIC_load[,1], query_TIC_load[,2], type="h", lwd=1, col='blue')
+
 ```
 \begin{center}Figure 1: Total ion chromatograms of reference (green) and query (blue).\end{center}
+
+
+Here we extract mass error information from the mzID file:
+
+```{r Calculate averageMassError, , eval=TRUE, echo=FALSE}
+cat('Average MS1 mass error: ', signif(1e6*mean_mz_error, digits=2), ' ppm.', sep='')
+
+hist(1e6*mz_error[abs(mz_error)<0.10]/mz[abs(mz_error)<0.10], breaks = 2000, main = 'ppm error', xlab = 'ppm', xlim = c(-20,20) )
+
+```
+\begin{center}Figure 2: ppm error.\end{center}
+
+
+```{r Plot errorVersusMass, eval=TRUE, echo=FALSE}
+plot(mz, 1e6*mz_error/mz, col=alpha('blue', 1), pch='.', ylim = c(-10,10), xlab='AvePrecursorMz', ylab='MassDiff (in ppm)')
+
+```
+\begin{center}Figure 3: ppm error with m/z.\end{center}

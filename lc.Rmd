@@ -1,11 +1,12 @@
 ---
 title: "LC QC Report"
-date version: "April 30, 2019"
 output:
   html_document: default
+  pdf_document: default
+date version: May 23, 2019
 ---
 
-[//]: # (This sub-report contains metrics related to the performance of LC system components. Metrics include estimated pH of mobile phases, column heater, shape of gradient, peak shape statistics (such as FWHM for 25, 50 and 75% quartiles and base peak width). Future work will include determining % TIC that is polysiloxane or detergents in order to evaluate column health and system contamination. This sub-report assumes the MS2.Rmd has been run first so that the files are available.)
+This sub-report contains metrics related to the performance of LC system components. Metrics include estimated pH of mobile phases, column heater, shape of gradient, peak shape statistics and peak capacity. Future work will include determining % TIC that is polysiloxane or detergents in order to evaluate column health and system contamination. This sub-report assumes the MS2.Rmd has been run first so that the files are available.
 
 
 ```{r Global Options, echo=FALSE}
@@ -14,53 +15,41 @@ options(tinytex.verbose = TRUE)
 ```
 
 
-[//]: # (1. Load R packages and specify the search parameters and sequence database)
-
-```{r Setup, echo=FALSE}
-library(mzR)
-library(scales)
-library(XML)
-library(pepXMLTab)
-library(ggplot2)
-
-# Commented out lines must be set before render call
-QUERY <- '2018-10-18_HeLa_OTOT'                              # query for QC
-#OUTPUT_DIR <- '/tmp/lkjdflkj'
-MZML_DIR <- 'C:/TPP/data/Ben'
-
-# The following are hard coded for now
-REFERENCE <- '2018-10-15_HeLa_OTOT'                          # reference (could be local)
-AMOUNT_INJECTED <- 200                                       # ng HeLa injected (reference)
-SPECTRAST_LIBRARY <- 'C:/TPP/data/Ben/HeLa.splib'                # HeLa library
-FASTA_FILE <- 'C:/TPP/data/Ben/up000005640.fasta'                # sequence database
-mzml_file <- paste(MZML_DIR,'/',QUERY,'.mzML',sep='')
-# cat('mzML file is',mzml_file)
+```{r Extract instrumentInfo, eval=TRUE, echo=FALSE}
+cat('Query file is ', make, ' ', model, '.', sep='')   # look up make and model of file for QC    
 ```
 
-[//]: # (1. Look at retention coefficients)
 
-[//]: # (Here we train a linear model (Palmblad *et al*., 2002) for predicting retention times, and compare the amino acid coefficients of the query model with those from the reference model. This will reveal changes in mobile phase composition, such as ionic strength or pH)
+1. Estimate peak capacity
 
-```{r Compare retention coefficients, eval=TRUE, echo=FALSE}
-reference_coeffs <- system(paste('rt -i ', tolower(REFERENCE), '.pep.xml -f tab',
-                               sep=''), intern=TRUE)
-aa_olc <- gsub('\\t.+$', '', reference_coeffs)
-reference_coeffs <- as.numeric(gsub('.\\t', '', reference_coeffs))
+```{r Estimate peakWidth, eval=TRUE, echo=FALSE}
+cat('Mean peak width (FWHM equivalent) =', signif(peak_width, digits=4), "seconds")
 
-query_coeffs <- system(paste('rt -i ', tolower(QUERY), '.pep.xml -f tab',
-                           sep=''), intern=TRUE) 
-query_coeffs <- as.numeric(gsub('.\\t', '', query_coeffs))
-
-aa_colors<-c('orange', 'blue', 'magenta', 'red', 'green', 'red', 'magenta', 'orange',
-             'blue', 'green', 'green', 'blue', 'green', 'green', 'green', 'orange', 
-             'orange', 'green', 'green', 'green', 'yellow', 'yellow', 'yellow', 
-             'yellow', 'black')
-limits <- c(min(reference_coeffs[1:20], query_coeffs[1:20]), max(reference_coeffs[1:20], 
-                                                                 query_coeffs[1:20]))
-plot(reference_coeffs[1:20], query_coeffs[1:20], pch=19, cex=2.5, 
-     col=alpha(aa_colors, 0.6), xlab='reference retention coefficient (min)', 
-     ylab='query retention coefficient (min)', xlim=limits, ylim=limits)
-text(reference_coeffs[1:20], query_coeffs[1:20]+0.0047*(max(query_coeffs[1:20])-
-     min(query_coeffs[1:20])), aa_olc[1:20], col='white', font=2, cex=0.8)
 ```
-\begin{center}Figure 3: Retention time coefficients for query compared with reference. The closer to the 45-degree diagonal the better. Deviation in basic and/or acidic residues suggests different pH.\end{center}
+The mean peak width is given, but there is no quality threshold for this metric. 
+
+
+2. Calculate peak capacity as defined in QuiC or ID-free?
+
+```{r Estimate peakCapacity, eval=TRUE, echo=FALSE}
+cat('Theor. peak capacity =', signif(gradient_length/peak_width, digits=4))
+
+```
+The peak capacity should be greater than 300 (for most nano systems), while between 200 and 300 is marginal, and less than 200 is considered bad.
+
+
+3. Look at retention coefficients
+
+Here we train a linear model (Palmblad *et al*., 2002) for predicting retention times, and compare the amino acid coefficients of the query model with those from the reference model. This will reveal changes in mobile phase composition, such as ionic strength or pH. The training is here done with R packages.
+
+```{r Compare retentionCoefficients, eval=TRUE, echo=FALSE}
+plot(reference_coeffs[1:21], query_coeffs[1:21], pch=19, cex=2.5, 
+     col=alpha(aa_colors, 0.6), xlab='reference retention coefficient (Z-score)', 
+     ylab='query retention coefficient (Z-score)', xlim=limits, ylim=limits, text(reference_coeffs[1:21], query_coeffs[1:21]+0.0047*(max(query_coeffs[1:21])-min(query_coeffs[1:21])), aa_olc, col='black', font=2, cex=0.8)) 
+
+abline(a=0, b=1, lty=2)
+
+```
+
+\begin{center}Figure 1: Retention time coefficients for query compared with reference. The closer to the 45-degree diagonal the better. Deviation in basic and/or acidic residues suggests different pH.\end{center}
+The deviation of these coeffecients from the diagonal implies your mobile phase pH may be off. If the line has a slope of 1, but a change in y-intercept then this may indicate your pumps aren't working. The deviation of the slope from 1 may be used as a diagnostic feature.
