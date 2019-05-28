@@ -107,16 +107,16 @@ cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC_load)/sum(reference_T
 # marginal (2)= 20-40% of matched spectra
 # bad (3) = <20% matched spectra
 
-if((100*sum(query_TIC)/sum(reference_TIC)) < 50){
+if((100*sum(query_TIC_load)/sum(reference_TIC_load)) < 50){
   system('echo 3 > sample.result')
-} else if ((100*sum(query_TIC)/sum(reference_TIC)) < 80){
+} else if ((100*sum(query_TIC_load)/sum(reference_TIC_load)) < 80){
   system('echo 2 > sample.result')
 } else {
   system('echo 1 > sample.result')
 }
 
 # render the sample html_document
-rmarkdown::render("/data/qc-benchmarker/sample.Rmd")
+rmarkdown::render("/data/qc-benchmarker/sample.Rmd", output_dir = OUTPUT_DIR)
 
 ```
 
@@ -278,7 +278,7 @@ if(peak_capacity_qual > coeff_qual){
 }
 
 # render the LC html_document
-rmarkdown::render("/data/qc-benchmarker/lc.Rmd")
+rmarkdown::render("/data/qc-benchmarker/lc.Rmd", output_dir = OUTPUT_DIR)
 
 ```
 
@@ -311,7 +311,7 @@ if((query_cor) < 0.5){
 }
 
 # render the source html_document
-rmarkdown::render("/data/qc-benchmarker/source.Rmd")
+rmarkdown::render("/data/qc-benchmarker/source.Rmd", output_dir = OUTPUT_DIR)
 
 ```
 
@@ -328,9 +328,9 @@ rmarkdown::render("/data/qc-benchmarker/source.Rmd")
 #reference_TIC <- tic(reference_file)
 #query_TIC <- tic(query_file)
 
-cat('Query TIC total area ', 100*sum(query_TIC)/sum(reference_TIC), '% of reference.',
+cat('Query TIC total area ', 100*sum(query_TIC_load)/sum(reference_TIC_load), '% of reference.',
     sep='')
-# cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC)/sum(reference_TIC), ' ng.',
+# cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC_load)/sum(reference_TIC_load), ' ng.',
 #    sep='')
 
 
@@ -358,7 +358,7 @@ if((abs(1e6*mean_mz_error)) > 15){
 }
 
 # render the ms1 html_document
-rmarkdown::render("/data/qc-benchmarker/ms1.Rmd")
+rmarkdown::render("/data/qc-benchmarker/ms1.Rmd", output_dir = OUTPUT_DIR)
 
 ```
 
@@ -378,7 +378,7 @@ if((100*nrow(psms(reference_ids))/nrow(psms(query_ids))) < 50){
 }
 
 # render the ms2 html_document
-rmarkdown::render("/data/qc-benchmarker/ms2.Rmd")
+rmarkdown::render("/data/qc-benchmarker/ms2.Rmd", output_dir = OUTPUT_DIR)
 
 ```
 
