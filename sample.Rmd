@@ -1,0 +1,46 @@
+---
+title: "Sample QC Report"
+output:
+  html_document: default
+  pdf_document: default
+date version: May 23, 2019
+---
+
+This sub-report contains metrics related to QC sample integrity. The QC Benchmarker automatically detects whether the sample was HeLa (Thermo), yeast (Promega) or *E. coli* (Waters) digest. Metrics include estimated sample loading, % spectra matched to sample, and +1 charge states over the gradient. Future work will include determining matches to cRAP/PRIDE contaminants.
+
+
+```{r Global Options, echo=FALSE}
+knitr::opts_chunk$set(fig.width=5, fig.height=5, fig.align='center', warning=FALSE, message=FALSE, error=TRUE)
+options(tinytex.verbose = TRUE)
+```
+
+
+```{r Extract instrumentInfo, eval=TRUE, echo=FALSE}
+cat('Query file is ', make, ' ', model, '.', sep='')   # look up make and model of file for QC    
+```
+
+
+1. Estimate loading
+
+```{r Estimate loading, eval=TRUE, echo=FALSE}
+cat('Query TIC total area ', 100*sum(query_TIC_load)/sum(reference_TIC_load), '% of reference.',
+    sep='')
+
+cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC_load)/sum(reference_TIC_load), ' ng.',
+    sep='')
+
+```
+
+
+2. Percent spectra matched
+
+```{r percent spectraMatched, eval=TRUE, echo=FALSE}
+
+```
+
+
+3. Distribution of charge states
+
+```{r charge stateDistribution, eval=TRUE, echo=FALSE}
+
+```

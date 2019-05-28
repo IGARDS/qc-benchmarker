@@ -1,0 +1,36 @@
+---
+title: "Source QC Report"
+output:
+  html_document: default
+  pdf_document: default
+date version: May 23, 2019
+---
+
+This sub-report contains metrics related to the performance of the source. This includes metrics such as smoothness of the MS1 TIC reflecting source sputtering.
+
+```{r Global Options, echo=FALSE}
+knitr::opts_chunk$set(fig.width=5, fig.height=5, fig.align='center', warning=FALSE, message=FALSE, error=TRUE)
+options(tinytex.verbose = TRUE)
+```
+
+
+```{r Extract instrumentInfo, eval=TRUE, echo=FALSE}
+cat('Query file is ', make, ' ', model, '.', sep='')   # look up make and model of file for QC    
+```
+
+
+1. Evaluate signal stability
+
+Here we use autocorrelation to evaluate spray stability
+
+```{r Compare signalStability, eval=TRUE, echo=FALSE}
+median_TIC <- median(as.numeric(query_TIC[1,1]@intensity))
+
+cat('Median TIC ', median_TIC, ' cps', sep='')
+
+barplot(c(reference_cor, query_cor), names.arg=c('reference','query'), col=c("green","blue"),
+        ylab='signal stability (lag-1 autocorrelation)', ylim=c(0,1))
+
+```
+
+\begin{center}Figure 1: Signal stability of reference (green) and query (blue).\end{center}
