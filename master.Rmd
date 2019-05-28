@@ -65,17 +65,18 @@ system('echo 0 > ms2.result')
 
 ```{r Searching, echo=FALSE}
 # Perform SpectraST search
-system(paste('wine spectrast -sL', SPECTRAST_LIBRARY, ' -sD', FASTA_FILE,
+system(paste('/local/tpp/bin/spectrast -sL', SPECTRAST_LIBRARY, ' -sD', FASTA_FILE,
              ' -sTAA -sA! -s_HOM4 -sR! -sEpep.xml ', OUTPUT_DIR,'/../',QUERY, '.mzML', sep = ''))
-system(paste('wine xinteract -N', sub('$', '.interact.pep.xml', QUERY), 
+system(paste('/local/tpp/bin/xinteract -N', sub('$', '.interact.pep.xml', QUERY), 
              ' -p0.95 -l7 -PPM -O -D', FASTA_FILE, ' ', OUTPUT_DIR,'/../',QUERY, '.pep.xml', sep = ''))
-
+# if wine doesn't work use /local/tpp/bin/
+			 
 # Extract QC values from SpectraST search
 # use already processed reference file
-system(paste('wine idconvert ', DATA_DIR, REFERENCE, '.interact.pep.xml',sep='')) 
-system(paste('wine idconvert ', OUTPUT_DIR,'/../',QUERY, '.interact.pep.xml', sep='')) 
+system(paste('/local/tpp/bin/idconvert ', DATA_DIR, REFERENCE, '.interact.pep.xml',sep='')) 
+system(paste('/local/tpp/bin/idconvert ', OUTPUT_DIR,'/../',QUERY, '.interact.pep.xml', sep='')) 
 
-# not sure if the mzid is created in working_dir or in oridinal xml location on DATA_DIR
+# not sure if the mzid is created in working_dir or in original xml location on DATA_DIR, and whether it is called interact.pep.mzid or just .mzid
 reference_ids <- openIDfile(paste(OUTPUT_DIR,'/../', REFERENCE, '.mzid', sep=''))
 query_ids <- openIDfile(paste(OUTPUT_DIR,'/../',QUERY, '.mzid', sep=''))
 
@@ -93,7 +94,7 @@ PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 reference_file <- openMSfile(paste(DATA_DIR, REFERENCE, '.mzML', sep=''))
 # query_file <- openMSfile(paste(OUTPUT_DIR,'/../',QUERY, '.mzML', sep=''))      # we already read this in at the start
 
-reference_TIC_load <- tic(reference_file)       # since we only use this to estimate load call _load
+reference_TIC_load <- tic(reference_file)       # since we only use this to estimate load call it '_load'
 query_TIC_load <- tic(query_file)
 
 cat('Query TIC total area ', 100*sum(query_TIC_load)/sum(reference_TIC_load), '% of reference.',
@@ -122,7 +123,7 @@ rmarkdown::render("/data/qc-benchmarker/sample.Rmd", output_dir = OUTPUT_DIR)
 
 
 
-5. LC; Estimate peak capacity. Calculate peak capacity as defined in QuiC or ID-free?
+5. LC; Estimate peak capacity. Calculate peak capacity as ID-free
 
 ```{r LC, echo=FALSE}
 query <- readMSData(paste(OUTPUT_DIR,'/../',QUERY, '.mzML', sep=''), msLevel = 1) # default is not onDisk, but this seems to avoid memory issue and is faster, but it makes the chromatogram() super slow
@@ -149,7 +150,7 @@ for(i in 1:1000) {if(fy2[i]<(min_fy2_w+(max_fy2-min_fy2_w)/2)) break}
 peak_width <- 1.412517*i*0.1 # FWHM = 1.412517 * (lag at autocorrelation half maximum for gaussian)
 cat('Mean peak width (FWHM equivalent) =', signif(peak_width, digits=4), "seconds")
 
-gradient_length <- 120*60 # in seconds
+gradient_length <- 120*60 # in seconds; in future the gradient will be determined not hard coded
 cat('Theor. peak capacity =', signif(gradient_length/peak_width, digits=4))
 
 
@@ -251,7 +252,7 @@ slp <-  coef(coeffs_model)[2]
 
 # need to write lowest quality so make score and take worst (1 good, 2 marginal, 3 bad)
 
-# score based on peak capacity
+# quality score based on peak capacity
 signif(gradient_length/peak_width)
 if((gradient_length/peak_width) < 200){
   peak_capacity_qual <- 3
@@ -261,7 +262,7 @@ if((gradient_length/peak_width) < 200){
   peak_capacity_qual <- 1
 }
 
-# score based on slp
+# quality score based on slope (slp)
 if(abs(slp-1) > 0.2){
   coeff_qual <- 3
 } else if (abs(slp-1) > 0.1){
@@ -270,7 +271,7 @@ if(abs(slp-1) > 0.2){
   coeff_qual <- 1
 }
 
-# take highest score (higher is more bad)
+# take highest score (higher is more bad) and write to lc.result
 if(peak_capacity_qual > coeff_qual){
   system(paste('echo ', peak_capacity_qual,' > lc.result', sep = ''))
 } else {
