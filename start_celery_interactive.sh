@@ -1,1 +1,1 @@
-celery -A app.celery worker  --concurrency 1
+celery -A app.celery worker -f /var/log/celery.log --concurrency 1 -l INFO

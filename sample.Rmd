@@ -6,6 +6,7 @@ output:
 date version: May 23, 2019
 ---
 
+
 [//]: # (This sub-report contains metrics related to QC sample integrity. The QC Benchmarker automatically detects whether the sample was HeLa (Thermo), yeast (Promega) or *E. coli* (Waters) digest. Metrics include estimated sample loading, % spectra matched to sample, and +1 charge states over the gradient. Future work will include determining matches to cRAP/PRIDE contaminants.)
 
 
@@ -16,6 +17,8 @@ options(tinytex.verbose = TRUE)
 
 
 ```{r Extract instrumentInfo, eval=TRUE, echo=FALSE}
+print(test_var);
+
 cat('Query file is ', make, ' ', model, '.', sep='')   # look up make and model of file for QC    
 ```
 

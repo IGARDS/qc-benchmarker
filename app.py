@@ -50,10 +50,13 @@ def glob_ctime_sort(path):
 def get_status(task_id):
     return str(run_all_task.AsyncResult(task_id).state)
 
-@app.route('/result/<task_id>/<html_prefix>')
-def result(task_id,html_prefix):
+@app.route('/result/<work_dir>/<task_id>/<html_prefix>')
+def result(work_dir,task_id,html_prefix):
+    if html_prefix == "log":
+        file = "/data/files/%s/%s/run_all_task.log"%(work_dir,task_id)
+        return view_results(path=urllib.parse.quote(file, safe=''))
+    
     state = run_all_task.AsyncResult(task_id).state
-    print(html_prefix)
     if state == 'PENDING':
         return not_started()
     elif state in states.EXCEPTION_STATES:
@@ -179,23 +182,24 @@ def run_all_task(output_dir,work_dir,raw_file):
     output_dir = "%s%s/%s"%(output_dir,work_dir,run_all_task.request.id)
     os.mkdir(output_dir)
     output_files = {}
-    prefix_cmd = "cd %s; R -e 'OUTPUT_DIR=\"%s\"; QUERY=\"%s\";"%(output_dir,output_dir,raw_file)
-        
+    prefix_cmd = "cd %s; R -e 'OUTPUT_DIR=\"%s\"; QUERY=\"%s\""%(output_dir,output_dir,raw_file)
+    render_cmd = ""
     open("%s/run_all_task.log"%output_dir,"w").write("Stdout and Stderr of commands that are run")
     for file_to_render in app.config["FILES_TO_RENDER"]:
-            open("%s/run_all_task.log"%output_dir,"a").write(file_to_render)
-            submethod=file_to_render.replace(".Rmd","")
-            output_file =  "%s.html"%submethod
-            output_files[output_file.replace(".html","")] = "%s/%s"%(output_dir,output_file)
-            render_cmd = " rmarkdown::render(\"/data/qc-benchmarker/%s.Rmd\",output_dir=\"%s\",output_file=\"%s\",knit_root_dir=\"%s\")'"%(submethod,output_dir,output_file,output_dir)
-            log_cmd = " >>%s/run_all_task.log 2>&1"%output_dir
-            cmd = prefix_cmd+render_cmd+log_cmd
-            try:
-                r = os.system(cmd)
-            except:
-                print("Error running",cmd)
-            #if r != 0:
-            #    raise Exception("Error code %d while running command '%s'"%(r,cmd)) 
+        open("%s/run_all_task.log"%output_dir,"a").write(file_to_render+"\n")
+        submethod=file_to_render.replace(".Rmd","")
+        output_file =  "%s.html"%submethod
+        output_files[output_file.replace(".html","")] = "%s/%s"%(output_dir,output_file)
+        render_cmd += "; rmarkdown::render(\"/data/qc-benchmarker/%s.Rmd\",output_dir=\"%s\",output_file=\"%s\",knit_root_dir=\"%s\")"%(submethod,output_dir,output_file,output_dir)
+    log_cmd = "' >>%s/run_all_task.log 2>&1"%output_dir
+    cmd = prefix_cmd+render_cmd+log_cmd
+    try:
+        print(cmd)
+        r = os.system(cmd)
+    except:
+        print("Error running",cmd)
+    #if r != 0:
+    #    raise Exception("Error code %d while running command '%s'"%(r,cmd)) 
     return output_files          
                       
 @app.route("/run/<method>/<raw_file>", methods=['POST'])

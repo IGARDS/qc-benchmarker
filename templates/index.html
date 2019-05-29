@@ -129,7 +129,7 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
         var myVar = setInterval(update_data, 1000);
     
         function update_button(submethod,raw_file,tid) {
-            $( "#"+submethod+"_"+raw_file ).click(function() {$("#iframe_results").attr("src", "/result/"+tid+"/"+submethod)});
+            $( "#"+submethod+"_"+raw_file ).click(function() {$("#iframe_results").attr("src", "/result/{{ work_dir }}/"+tid+"/"+submethod)});
         }
 
         function update_data() {
@@ -146,6 +146,7 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
                             var submethod = response['submethods'][j];
                             update_button(submethod,raw_file,tid);
                         }
+                        update_button("log",raw_file,tid)
                     }
                     console.log(response);
                     //$( "#click_refresh_raw_files" ).click()
@@ -186,6 +187,7 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
           </button>
     {% endfor %}
     <button id='rerun_{{ raw_file }}'>rerun</button>
+    <button id='log_{{ raw_file }}'>log</button>
     </div>
 {% endfor %}
 </div>
@@ -199,6 +201,7 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
            // this callback will be called asynchronously
            // when the response is available
             console.log(response);
+            alert("New task id: "+response['id']);
            //$( "#click_refresh_raw_files" ).click()
         }, function errorCallback(response) {
            // called asynchronously if an error occurs
