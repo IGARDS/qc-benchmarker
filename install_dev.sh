@@ -1,3 +1,4 @@
+#!/bin/bash 
 apt update
 apt install -y vim
 apt install -y curl
@@ -22,9 +23,9 @@ source $ENV_DIR/bin/activate
 pip install jupyter
 pip install jupyterlab
 
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
-echo "deb https://cloud.r-project.org/bin/linux/ubuntu xenial-cran35/" >> /etc/apt/sources.list
-apt-get install -y r-base r-base-dev
+#apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
+#echo "deb https://cloud.r-project.org/bin/linux/ubuntu xenial-cran35/" >> /etc/apt/sources.list
+#apt-get install -y r-base r-base-dev
 
 #echo "deb http://cran.rstudio.com/bin/linux/debian jessie-cran3/" >> /etc/apt/sources.list
 #apt-get update
