@@ -18,6 +18,9 @@ apt update
 rm -rf /usr/local/lib/R/site-library/*
 rm -rf /usr/lib/R/site-library/*
 rm -rf /usr/lib/R/library/*
+apt -y install libcurl3
+apt -y install libpng-dev
+apt -y install libreadline6 
 apt -y install r-base* r-recommended
 
 apt install -y libxml2-dev
