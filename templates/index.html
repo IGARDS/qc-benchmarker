@@ -275,11 +275,13 @@ function myFunction() {
       <button id='rerun_{{ raw_file }}'>Process</button>
       <button id='log_{{ raw_file }}'>Log</button>
       <p>
+      <!--
       {% for submethod in submethods %}
           {% if submethod != "master" %}
-              <img src="/system_graphics/{{ submethod }}_inprogress.png" id='{{ submethod }}_{{ raw_file }}' style='float:center' width="47" height="100">
+              --><img src="/system_graphics/{{ submethod }}_inprogress.png" id='{{ submethod }}_{{ raw_file }}' style='float:inline' width="47" height="100"><!--
           {% endif %}
       {% endfor %}
+      -->
       <br>
     </div>
 {% endfor %}
