@@ -3,10 +3,9 @@ title: "MS1 QC Report"
 output:
   html_document: default
   pdf_document: default
-date version: May 24, 2019
+date version: May 31, 2019
 ---
 
-This sub-report contains metrics related to the performance of the MS1. This includes metrics using results of a SpectraST search blah blah. Metrics include the number of MS1 scans (and average per second), MS1 scan intensity distribution and median, MS1 frequency v retention time, and MS1 mass error.
 
 
 ```{r Global Options, echo=FALSE}
@@ -19,16 +18,16 @@ options(tinytex.verbose = TRUE)
 cat('Query file is ', make, ' ', model, '.', sep='')   # look up make and model of file for QC    
 ```
 
+***
 
-Extract QC values from query
-
-Here we extract and plot the TICs from the mzML files:
+## Total ion chromatogram
 
 ```{r Extract TICs, eval=TRUE, echo=FALSE}
 
-cat('Query TIC total area ', 100*sum(query_TIC_load)/sum(reference_TIC_load), '% of reference.',
+cat('Query TIC total area ', signif(100*sum(query_TIC_load)/sum(reference_TIC_load), digits=2), '% of reference.',
     sep='')
-cat('Est. amount injected ', AMOUNT_INJECTED*sum(query_TIC_load)/sum(reference_TIC_load), ' ng.',
+
+cat('Est. amount injected ', signif(AMOUNT_INJECTED*sum(query_TIC_load)/sum(reference_TIC_load), digits=2), ' ng.',
     sep='')
 
 plot(reference_TIC_load[,1], reference_TIC_load[,2], type="h", lwd=1, col='green', 
@@ -36,8 +35,11 @@ plot(reference_TIC_load[,1], reference_TIC_load[,2], type="h", lwd=1, col='green
 lines(query_TIC_load[,1], query_TIC_load[,2], type="h", lwd=1, col='blue')
 
 ```
-\begin{center}Figure 1: Total ion chromatograms of reference (green) and query (blue).\end{center}
+<center>Figure 1: Total ion chromatograms of reference (green) and query (blue).</center>
 
+***
+
+## MS1 Mass error
 
 Here we extract mass error information from the mzID file:
 
@@ -47,11 +49,23 @@ cat('Average MS1 mass error: ', signif(1e6*mean_mz_error, digits=2), ' ppm.', se
 hist(1e6*mz_error[abs(mz_error)<0.10]/mz[abs(mz_error)<0.10], breaks = 2000, main = 'ppm error', xlab = 'ppm', xlim = c(-20,20) )
 
 ```
-\begin{center}Figure 2: ppm error.\end{center}
+<center>Figure 2: ppm error.</center>
 
 
 ```{r Plot errorVersusMass, eval=TRUE, echo=FALSE}
 plot(mz, 1e6*mz_error/mz, col=alpha('blue', 1), pch='.', ylim = c(-10,10), xlab='AvePrecursorMz', ylab='MassDiff (in ppm)')
 
 ```
-\begin{center}Figure 3: ppm error with m/z.\end{center}
+<center>Figure 3: ppm error with m/z.</center>
+
+***
+
+## MS1 Injection time statistics
+```{r MS1 injectionTime, eval=TRUE, echo=FALSE}
+
+cat('Mean MS1 injection time: ', signif(mean_query_injectionTime, digits=3), ' sec.', sep='')
+
+hist(query_header$injectionTime, main = 'MS1 Injection Time', xlab = 'MS Injection Time (sec)')
+
+```
+<center>Figure 4: MS1 Injection Time.</center>

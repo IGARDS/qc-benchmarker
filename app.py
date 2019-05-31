@@ -50,11 +50,15 @@ def glob_ctime_sort(path):
 def get_status(task_id):
     return str(run_all_task.AsyncResult(task_id).state)
 
-@app.route('/result/<work_dir>/<task_id>/<html_prefix>')
-def result(work_dir,task_id,html_prefix):
+@app.route('/system_graphics/<file_name>')
+def system_graphics(file_name):
+    return send_from_directory("/data/qc-benchmarker/system_graphics",file_name)
+
+@app.route('/render/<work_dir>/<task_id>/<html_prefix>')
+def render(work_dir,task_id,html_prefix):
     if html_prefix == "log":
         file = "/data/files/%s/%s/run_all_task.log"%(work_dir,task_id)
-        return view_results(path=urllib.parse.quote(file, safe=''))
+        return get_html(path=urllib.parse.quote(file, safe=''))
     
     state = run_all_task.AsyncResult(task_id).state
     if state == 'PENDING':
@@ -62,12 +66,17 @@ def result(work_dir,task_id,html_prefix):
     elif state in states.EXCEPTION_STATES:
         return error()
     try:
-        output_files = run_all_task.AsyncResult(task_id).get(timeout=1.0)
+        results = run_all_task.AsyncResult(task_id).get(timeout=1.0)
     except:
         return running()
     
-    file = output_files[html_prefix]
-    return view_results(path=urllib.parse.quote(file, safe=''))
+    file = "/data/files/%s/%s/%s.html"%(work_dir,task_id,html_prefix)
+    return get_html(path=urllib.parse.quote(file, safe=''))
+
+@app.route('/result/<work_dir>/<task_id>/<result_prefix>')
+def result(work_dir,task_id,result_prefix):
+    file = "/data/files/%s/%s/%s.result"%(work_dir,task_id,result_prefix)
+    return get_result(path=urllib.parse.quote(file, safe=''))
 
 def get_info(work_dir):
     if work_dir == None:
@@ -89,7 +98,8 @@ def get_info(work_dir):
         if raw_file not in id_result_files:
             status_result_files[raw_file] = get_status("NOID")
             id_result_files[raw_file] = "NOID"
-    return {"work_dir":work_dir,"raw_files":raw_files,"status_result_files":status_result_files,"id_result_files":id_result_files,"submethods":submethods}
+    return {"work_dir":work_dir,"raw_files":raw_files,"status_result_files":status_result_files,
+            "id_result_files":id_result_files,"submethods":submethods,"disable":settings.DISABLE}
 
 @app.route('/info/<work_dir>')
 def info(work_dir):
@@ -132,7 +142,8 @@ def index(work_dir=None):
                            raw_files=myinfo["raw_files"],
                            status_result_files=myinfo["status_result_files"],
                            id_result_files=myinfo["id_result_files"],
-                           submethods=myinfo["submethods"]
+                           submethods=myinfo["submethods"],
+                           disable=settings.DISABLE
                           )
 
 @app.route('/upload', methods=['POST'])
@@ -182,7 +193,8 @@ def run_all_task(output_dir,work_dir,raw_file):
     output_dir = "%s%s/%s"%(output_dir,work_dir,run_all_task.request.id)
     os.mkdir(output_dir)
     output_files = {}
-    prefix_cmd = "cd %s; R -e 'OUTPUT_DIR=\"%s\"; QUERY=\"%s\""%(output_dir,output_dir,raw_file)
+    
+    prefix_cmd = "source /data/qc-benchmarker/source.me;\ncd %s;\nR -e 'OUTPUT_DIR=\"%s\"; QUERY=\"%s\""%(output_dir,output_dir,raw_file)
     render_cmd = ""
     open("%s/run_all_task.log"%output_dir,"w").write("Stdout and Stderr of commands that are run")
     for file_to_render in app.config["FILES_TO_RENDER"]:
@@ -190,14 +202,12 @@ def run_all_task(output_dir,work_dir,raw_file):
         submethod=file_to_render.replace(".Rmd","")
         output_file =  "%s.html"%submethod
         output_files[output_file.replace(".html","")] = "%s/%s"%(output_dir,output_file)
-        render_cmd += "; rmarkdown::render(\"/data/qc-benchmarker/%s.Rmd\",output_dir=\"%s\",output_file=\"%s\",knit_root_dir=\"%s\")"%(submethod,output_dir,output_file,output_dir)
+        if "master" in file_to_render:
+            render_cmd += "; rmarkdown::render(\"/data/qc-benchmarker/%s.Rmd\",output_dir=\"%s\",output_file=\"%s\",knit_root_dir=\"%s\")"%(submethod,output_dir,output_file,output_dir)
     log_cmd = "' >>%s/run_all_task.log 2>&1"%output_dir
     cmd = prefix_cmd+render_cmd+log_cmd
-    try:
-        print(cmd)
-        r = os.system(cmd)
-    except:
-        print("Error running",cmd)
+    open("%s/command.sh"%output_dir,"w").write(cmd)
+    r = os.system("/bin/bash %s/command.sh"%output_dir)
     #if r != 0:
     #    raise Exception("Error code %d while running command '%s'"%(r,cmd)) 
     return output_files          
@@ -215,10 +225,21 @@ def run(method,raw_file):
     open("%s%s/%s.result"%(app.config["OUTPUT_DIR"],work_dir,res.task_id),"w").write(json.dumps(context, indent=4))
     return jsonify(context)
 
-def view_results(path):
+def get_html(path):
     path=urllib.parse.unquote(path)
     work_dir = "/".join(path.split("/")[0:-1])
-    file_name = path.split("/")[-1]  
+    file_name = path.split("/")[-1]
+    if ".log" in path:
+        contents=open(path,"r").read()
+        contents = "<html><body><pre>"+contents+"</pre></body></html>"
+        open(path+".html","w").write(contents)
+        file_name = file_name+".html"
+    return send_from_directory(work_dir,file_name)
+                      
+def get_result(path):
+    path=urllib.parse.unquote(path)
+    work_dir = "/".join(path.split("/")[0:-1])
+    file_name = path.split("/")[-1]
     return send_from_directory(work_dir,file_name)
 
 if __name__ == "__main__":

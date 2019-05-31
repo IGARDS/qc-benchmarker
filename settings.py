@@ -6,4 +6,6 @@ OUTPUT_DIR = "/data/files"
 if OUTPUT_DIR[-1] != "/":
     OUTPUT_DIR = OUTPUT_DIR+"/"
     
-FILES_TO_RENDER = ["master.Rmd","sample.Rmd","lc.Rmd","source.Rmd","ms1.Rmd","ms2.Rmd"] # These are processed in order
+FILES_TO_RENDER = ["sample.Rmd","lc.Rmd","source.Rmd","ms1.Rmd","ms2.Rmd","master.Rmd"] # These are processed in order
+
+DISABLE=True

@@ -58,24 +58,27 @@ system('echo 0 > ms1.result')
 system('echo 0 > ms2.result')
 
 ```
+
+
+
 3. Perform searches for ID-based metrics. Note that this step will not complete if something is wrong, and is a good check point to use and go straight to "can't process" which is 4 > .results. 0 in .results will be reserved for "in-progress".
 
 ```{r Searching, echo=FALSE}
 # Perform SpectraST search
 system(paste('/local/tpp/bin/spectrast -sL', SPECTRAST_LIBRARY, ' -sD', FASTA_FILE,
-             ' -sTAA -sA! -s_HOM4 -sR! -sEpep.xml ', OUTPUT_DIR,'/../',QUERY, '.mzML', sep = ''))
+             ' -sTAA -sA! -s_HOM4 -sR! -sEpep.xml ', OUTPUT_DIR, '/', QUERY, '.mzML', sep = ''))
 system(paste('/local/tpp/bin/xinteract -N', sub('$', '.interact.pep.xml', QUERY), 
-             ' -p0.95 -l7 -PPM -O -D', FASTA_FILE, ' ', OUTPUT_DIR,'/../',QUERY, '.pep.xml', sep = ''))
-# if wine doesn't work use /local/tpp/bin/
+             ' -p0.95 -l7 -PPM -O -D', FASTA_FILE, ' ', OUTPUT_DIR, '/', QUERY, '.pep.xml', sep = ''))
+
 			 
 # Extract QC values from SpectraST search
-# use already processed reference file
-system(paste('/local/tpp/bin/idconvert ', DATA_DIR, REFERENCE, '.interact.pep.xml',sep='')) 
-system(paste('/local/tpp/bin/idconvert ', OUTPUT_DIR,'/../',QUERY, '.interact.pep.xml', sep='')) 
+# use already processed reference file which is DATA_DIR/REFERENCE.mzid (or interact.pep.xml or pep.xml)
 
-# not sure if the mzid is created in working_dir or in original xml location on DATA_DIR, and whether it is called interact.pep.mzid or just .mzid
-reference_ids <- openIDfile(paste(OUTPUT_DIR,'/../', REFERENCE, '.mzid', sep=''))
-query_ids <- openIDfile(paste(OUTPUT_DIR,'/../',QUERY, '.mzid', sep=''))
+system(paste('/local/tpp/bin/idconvert ', OUTPUT_DIR, '/', QUERY, '.interact.pep.xml', sep=''))
+
+# mzID and all other files are in OUTPUT_DIR
+reference_ids <- openIDfile(paste(DATA_DIR, REFERENCE, '.mzid', sep=''))
+query_ids <- openIDfile(paste(OUTPUT_DIR, '/', QUERY, '.mzid', sep=''))
 
 PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 
@@ -89,7 +92,7 @@ PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 
 ```{r Sample, echo=FALSE}
 reference_file <- openMSfile(paste(DATA_DIR, REFERENCE, '.mzML', sep=''))
-# query_file <- openMSfile(paste(OUTPUT_DIR,'/../',QUERY, '.mzML', sep=''))      # we already read this in at the start
+# query_file <- openMSfile(paste(OUTPUT_DIR, '/', QUERY, '.mzML', sep=''))      # we already read this in at the start
 
 reference_TIC_load <- tic(reference_file)       # since we only use this to estimate load call it '_load'
 query_TIC_load <- tic(query_file)
@@ -114,7 +117,7 @@ if((100*sum(query_TIC_load)/sum(reference_TIC_load)) < 50){
 }
 
 # render the sample html_document
-rmarkdown::render("/data/qc-benchmarker/sample.Rmd", output_dir = OUTPUT_DIR)
+rmarkdown::render("/data/qc-benchmarker/sample.Rmd", output_dir = OUTPUT_DIR,output_file="sample.html",knit_root_dir=OUTPUT_DIR);
 
 ```
 
@@ -123,9 +126,11 @@ rmarkdown::render("/data/qc-benchmarker/sample.Rmd", output_dir = OUTPUT_DIR)
 5. LC; Estimate peak capacity. Calculate peak capacity as ID-free
 
 ```{r LC, echo=FALSE}
-query <- readMSData(paste(OUTPUT_DIR,'/../',QUERY, '.mzML', sep=''), msLevel = 1) # default is not onDisk, but this seems to avoid memory issue and is faster, but it makes the chromatogram() super slow
+query <- readMSData(paste(OUTPUT_DIR, '/', QUERY, '.mzML', sep=''), msLevel = 1) 
 query_BPC <- chromatogram(query, aggregationFun = "max") 
+```
 
+```{r LC.2, echo=FALSE}
 
 # first calculate peak width with lag 1 and theoretical peak capacity
 x <- as.numeric(query_BPC[1,1]@rtime)
@@ -154,7 +159,7 @@ cat('Theor. peak capacity =', signif(gradient_length/peak_width, digits=4))
 # Look at retention coeffecients
 # Here we train a linear model (Palmblad *et al*., 2002) for predicting retention times, and compare the amino acid coefficients of the query model with those from the reference model. This will reveal changes in mobile phase composition, such as ionic strength or pH. The training is here done with R packages.
 peptides <-c(); RTs <- c()
-psms <- xmlToList(paste(tolower(OUTPUT_DIR,'/../',QUERY), '.interact.pep.xml', sep=''))
+psms <- xmlToList(paste(OUTPUT_DIR, '/', QUERY, '.interact.pep.xml', sep=''))
 for (i in seq(5,length(psms$msms_run_summary)-1)) {
     peptides <- c(peptides,as.character(psms$msms_run_summary[i]$spectrum_query$search_result$search_hit$.attrs['peptide']))
     RTs <- c(RTs,as.numeric(psms$msms_run_summary[i]$spectrum_query$.attrs['retention_time_sec']))
@@ -276,7 +281,7 @@ if(peak_capacity_qual > coeff_qual){
 }
 
 # render the LC html_document
-rmarkdown::render("/data/qc-benchmarker/lc.Rmd", output_dir = OUTPUT_DIR)
+rmarkdown::render("/data/qc-benchmarker/lc.Rmd", output_dir = OUTPUT_DIR,output_file="lc.html",knit_root_dir=OUTPUT_DIR)
 
 ```
 
@@ -284,7 +289,7 @@ rmarkdown::render("/data/qc-benchmarker/lc.Rmd", output_dir = OUTPUT_DIR)
 6. Source. Compare signal stability
 
 ```{r Source, echo=FALSE}
-# query <- readMSData(paste(OUTPUT_DIR,'/../',QUERY, '.mzML', sep=''), msLevel = 1) # already did this for LC section
+# query <- readMSData(paste(OUTPUT_DIR, '/', QUERY, '.mzML', sep=''), msLevel = 1) # already did this for LC section
 query_TIC <- chromatogram(query, aggregationFun = "sum")
 
 reference <- readMSData(paste(DATA_DIR, REFERENCE, '.mzML', sep=''), msLevel = 1)
@@ -309,7 +314,7 @@ if((query_cor) < 0.5){
 }
 
 # render the source html_document
-rmarkdown::render("/data/qc-benchmarker/source.Rmd", output_dir = OUTPUT_DIR)
+rmarkdown::render("/data/qc-benchmarker/source.Rmd", output_dir = OUTPUT_DIR,output_file="source.html",knit_root_dir=OUTPUT_DIR)
 
 ```
 
@@ -346,6 +351,17 @@ plot(mz, 1e6*mz_error/mz, col=alpha('blue', 1), pch='.', ylim = c(-10,10), xlab=
 
 cat('Average MS1 mass error: ', signif(1e6*mean_mz_error, digits=2), ' ppm.', sep='')
 
+# extract injection time statistics
+query_header <- header(query_file)
+
+# mean_reference_injectionTime <- mean(reference_header$injectionTime[reference_header$injectionTime<max(reference_header$injectionTime)])
+
+mean_query_injectionTime <- mean(query_header$injectionTime[query_header$injectionTime<max(query_header$injectionTime)])
+
+cat('Mean MS1 injection time: ', signif(mean_query_injectionTime, digits=2), ' sec.', sep='')
+
+hist(query_header$injectionTime, main = 'MS1 Injection Time', xlab = 'MS Injection Time (sec)')
+
 # make quality call using mass error. Should be based on instrument type
 if((abs(1e6*mean_mz_error)) > 15){
   system('echo 3 > ms1.result')
@@ -356,7 +372,7 @@ if((abs(1e6*mean_mz_error)) > 15){
 }
 
 # render the ms1 html_document
-rmarkdown::render("/data/qc-benchmarker/ms1.Rmd", output_dir = OUTPUT_DIR)
+rmarkdown::render("/data/qc-benchmarker/ms1.Rmd", output_dir = OUTPUT_DIR,output_file="ms1.html",knit_root_dir=OUTPUT_DIR)
 
 ```
 
@@ -367,16 +383,16 @@ rmarkdown::render("/data/qc-benchmarker/ms1.Rmd", output_dir = OUTPUT_DIR)
 ```{r MS2, echo=FALSE}
 PSMs <- c(nrow(psms(reference_ids)), nrow(psms(query_ids)))
 
-if((100*nrow(psms(reference_ids))/nrow(psms(query_ids))) < 50){
+if((100*nrow(psms(query_ids))/nrow(psms(reference_ids))) < 50){
   system('echo 3 > ms2.result')
-} else if ((100*nrow(psms(reference_ids))/nrow(psms(query_ids))) < 80){
+} else if ((100*nrow(psms(query_ids))/nrow(psms(reference_ids))) < 80){
   system('echo 2 > ms2.result')
 } else {
   system('echo 1 > ms2.result')
 }
 
 # render the ms2 html_document
-rmarkdown::render("/data/qc-benchmarker/ms2.Rmd", output_dir = OUTPUT_DIR)
+rmarkdown::render("/data/qc-benchmarker/ms2.Rmd", output_dir = OUTPUT_DIR,output_file="ms2.html",knit_root_dir=OUTPUT_DIR)
 
 ```
 
@@ -393,3 +409,6 @@ if(nrow(psms(query_ids)) < 1){
   system('echo 4 > ms2.result')
 }
 
+system(paste('rm ',OUTPUT_DIR, '/', QUERY, '.mzML', sep=''))
+
+```

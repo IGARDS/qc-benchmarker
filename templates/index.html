@@ -41,6 +41,7 @@
           padding: 10px 24px; /* Some padding */
           cursor: pointer; /* Pointer/hand icon */
           float: center; /* Float the buttons side by side */
+            
         }
 
         /* Clear floats (clearfix hack) */
@@ -96,6 +97,14 @@ makeGetCall = function (url, data) { // here the data and url are not hardcoded 
         contentType: "application/json;charset=utf-8"
     });
 }
+    
+makeGetCallPlain = function (url) { // here the data and url are not hardcoded anymore
+
+    return $.ajax({
+        type: "GET",
+        url: url
+    });
+}
 </script>
 
 <center>
@@ -126,14 +135,25 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
 </script>
     
 <script>
-        var myVar = setInterval(update_data, 1000);
+        var myVar1 = setInterval(update_data, 1000);
+        var myVar2 = setInterval(update_images, 1000);
     
         function update_button(submethod,raw_file,tid) {
-            $( "#"+submethod+"_"+raw_file ).click(function() {$("#iframe_results").attr("src", "/result/{{ work_dir }}/"+tid+"/"+submethod)});
+            $( "#"+submethod+"_"+raw_file ).click(function() {
+                $("#iframe_results").attr("src","/render/{{ work_dir }}/"+tid+"/"+submethod);
+                /*makeGetCallPlain("/render/{{ work_dir }}/"+tid+"/"+submethod, {})
+                .then(function successCallback(response) {
+                    $("#iframe_results").contents().find("html").html(response);
+                }, function errorCallback(response) {
+                   // called asynchronously if an error occurs
+                   // or server returns response with an error status.
+                    console.log(response);
+                    console.log("Something went wrong with /render/{{ work_dir }}/"+tid+"/"+submethod)
+                });*/
+            });
         }
 
         function update_data() {
-            var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
             makeGetCall("/info/{{ work_dir }}", {})
                 .then(function successCallback(response) {
                     // this callback will be called asynchronously
@@ -148,20 +168,89 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
                         }
                         update_button("log",raw_file,tid)
                     }
-                    console.log(response);
-                    //$( "#click_refresh_raw_files" ).click()
                 }, function errorCallback(response) {
                    // called asynchronously if an error occurs
                    // or server returns response with an error status.
-                    alert("Something went wrong!")
+                    console.log("Something went wrong with call to info!")
                 });
         }
+    
+        function update_image(submethod,raw_file,tid) {
+                makeGetCallPlain("/result/{{ work_dir }}/"+tid+"/"+submethod, {})
+                .then(function successCallback(response) {
+                    var r = parseInt(response);
+                    console.log(submethod,r);
+                    /*
+                    processing in progress = 0  
+                    good = 1  
+                    marginal = 2  
+                    bad = 3  
+                    error = 4  
+                    */
+                    if (r == 0) {
+                        $( "#"+submethod+"_"+raw_file ).attr("src","/system_graphics/"+submethod+"_inprogress.png");
+                    } else if (r == 1) {
+                        $( "#"+submethod+"_"+raw_file ).attr("src","/system_graphics/"+submethod+"_good.png");
+                    } else if (r == 2) {
+                        $( "#"+submethod+"_"+raw_file ).attr("src","/system_graphics/"+submethod+"_marg.png");                       
+                    } else if (r == 3) {
+                        $( "#"+submethod+"_"+raw_file ).attr("src","/system_graphics/"+submethod+"_bad.png");                      
+                    } else if (r == 4) {
+                        $( "#"+submethod+"_"+raw_file ).attr("src","/system_graphics/"+submethod+"_error.png");                      
+                    }
+                }, function errorCallback(response) {
+                   // called asynchronously if an error occurs
+                   // or server returns response with an error status.
+                    console.log(response);
+                    console.log("Something went wrong with /result/{{ work_dir }}/"+tid+"/"+submethod)
+                });                
+        }
+    
+        function update_images() {
+            makeGetCall("/info/{{ work_dir }}", {})
+                .then(function successCallback(response) {
+                    // this callback will be called asynchronously
+                    // when the response is available
+                    var i;
+                    for (i = 0; i < response['raw_files'].length; i++) {
+                        var raw_file = response['raw_files'][i];
+                        var tid = response['id_result_files'][raw_file];
+                        if (tid != "NOID") {
+                            for (j = 0; j < response['submethods'].length; j++) {
+                                var submethod = response['submethods'][j];
+                                if (submethod != "master" && submethod != "rerun" && submethod != "log") {
+                                    update_image(submethod,raw_file,tid);
+                                }
+                            }
+                        }
+                    }
+                }, function errorCallback(response) {
+                   // called asynchronously if an error occurs
+                   // or server returns response with an error status.
+                    console.log("Something went wrong with call to info!")
+                });
+        }  
+    
+        update_data();
+        update_images();
 </script>
     
+{% if disable == False %}
 <form method="POST" action='/upload' class="dropzone dz-clickable" 
       id="dropper" enctype="multipart/form-data">
     <input type="hidden" id="work_dir" name="work_dir" value="{{ work_dir }}">
 </form>
+{% else %}
+<script language="javascript">
+function myFunction() {
+    alert("This is turned off")
+}
+</script>
+    
+<form onsubmit="myFunction(); return false;">
+    <input type="hidden" id="work_dir" name="work_dir" value="{{ work_dir }}">
+</form>
+{% endif %}
 
 <script type="application/javascript">
     Dropzone.options.dropper = {
@@ -178,51 +267,48 @@ Save this url for future reference: <a id="save_url" href="/index/{{ work_dir }}
 <hr>
         
 <div id="raw_files_list">
+<center>
 {% for raw_file in raw_files %}
     <h3>{{ raw_file }}</h3>
-    <div class="btn-group">
+    <div class="btn-group2">
+      <button id='master_{{ raw_file }}'>Full Report</button>
+      <button id='rerun_{{ raw_file }}'>Process</button>
+      <button id='log_{{ raw_file }}'>Log</button>
+      <p>
       {% for submethod in submethods %}
-          <button type="button" id='{{ submethod }}_{{ raw_file }}' >
-              {{ submethod }}
-          </button>
-    {% endfor %}
-    <button id='rerun_{{ raw_file }}'>rerun</button>
-    <button id='log_{{ raw_file }}'>log</button>
+          {% if submethod != "master" %}
+              <img src="/system_graphics/{{ submethod }}_inprogress.png" id='{{ submethod }}_{{ raw_file }}' style='float:center' width="47" height="100">
+          {% endif %}
+      {% endfor %}
+      <br>
     </div>
 {% endfor %}
+</center>
 </div>
     
 {% for raw_file in raw_files %}
     <script>
-    $( "#rerun_{{ raw_file }}" ).click(function() {
-        var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
-        makePostCall("/run/run_all/"+checkedValue, {'work_dir' : '{{ work_dir }}'})
-        .then(function successCallback(response) {
-           // this callback will be called asynchronously
-           // when the response is available
-            console.log(response);
-            alert("New task id: "+response['id']);
-           //$( "#click_refresh_raw_files" ).click()
-        }, function errorCallback(response) {
-           // called asynchronously if an error occurs
-           // or server returns response with an error status.
-            alert("Something went wrong!")
-        })
-    });
+    {% if disable == False %}
+        $( "#rerun_{{ raw_file }}" ).click(function() {
+            var checkedValue = "{{ raw_file }}"; //$('#raw_files_array:checked').val();
+            makePostCall("/run/run_all/"+checkedValue, {'work_dir' : '{{ work_dir }}'})
+            .then(function successCallback(response) {
+               // this callback will be called asynchronously
+               // when the response is available
+                console.log(response);
+                alert("New task id: "+response['id']);
+               //$( "#click_refresh_raw_files" ).click()
+            }, function errorCallback(response) {
+               // called asynchronously if an error occurs
+               // or server returns response with an error status.
+                alert("Something went wrong!");
+            })
+        });
+    {% else %}
+        $( "#rerun_{{ raw_file }}" ).click(function() {alert("This has been disabled for demo purposes ({{ disable }})")});
+    {% endif %}
     </script>
 {% endfor %}
-
-<div class="btn-group">
-<form>
-<button id='click_refresh_raw_files' type="button">Click to Refresh</button>
-</form>
-</div>
-   
-<script>
-$( "#click_refresh_raw_files" ).click(function() {
-  $( "#raw_files_list" ).load("/index/{{ work_dir }}" +  ' #raw_files_list');
-});
-</script>
     
 <hr>
 
