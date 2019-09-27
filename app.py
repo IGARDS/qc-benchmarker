@@ -9,6 +9,8 @@ import logging
 import os
 import sys as sys2
 
+from flask_basicauth import BasicAuth
+
 from flask import render_template, Blueprint, request, make_response
 from werkzeug.utils import secure_filename
 
@@ -21,11 +23,15 @@ import glob
 #from pydrop import config
 
 #blueprint = Blueprint('templated', __name__, template_folder='templates')
+bp = Blueprint('qc-benchmarker', __name__,
+                        template_folder='templates')
 
 log = logging.getLogger('pydrop')
 
 app = Flask(__name__)
 app.config.from_object(settings)
+
+basic_auth = BasicAuth(app)
 
 def make_celery(app):
     celery = Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'])

@@ -5,7 +5,9 @@ pip install redis
 pip install flask
 pip install celery
 pip install requests
+pip install wheel
 pip install blueprint
+pip install Flask-BasicAuth
 #apt install apache2
 
 apt install -y apt-transport-https software-properties-common
