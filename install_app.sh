@@ -12,7 +12,7 @@ pip install Flask-BasicAuth
 
 apt install -y apt-transport-https software-properties-common
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
-add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/'
+add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu xenial-cran35/'
 apt update
 apt -y purge r-base* r-recommended r-cran-*
 apt -y autoremove
@@ -39,6 +39,7 @@ R -e 'install.packages("Rcpp", repos="http://cran.us.r-project.org")'
 R -e 'install.packages("plyr", repos="http://cran.us.r-project.org")'
 R -e 'install.packages("rshape2", repos="http://cran.us.r-project.org")'
 R -e 'install.packages("ggplot2", repos="http://cran.us.r-project.org")'
+R -e 'BiocManager::install("MSnbase")'
 
 #R -e 'library("rmarkdown"); render("/data/qc-benchmarker/qc_pipeline.Rmd","html_document")'
 

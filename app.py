@@ -187,7 +187,7 @@ def run_all_task(output_dir,work_dir,raw_file):
             submethod=file_to_render.replace(".Rmd","")
             output_file =  "%s.html"%submethod
             output_files[output_file.replace(".html","")] = "%s/%s"%(output_dir,output_file)
-            render_cmd = " rmarkdown::render(\"/data/qc-benchmarker/%s.Rmd\",output_dir=\"%s\",output_file=\"%s\")'"%(submethod,output_dir,output_file)
+            render_cmd = " rmarkdown::render(\"/data/qc-benchmarker/%s.Rmd\",output_dir=\"%s\",output_file=\"%s\",knit_root_dir=\"%s\")' >%s/log 2>&1"%(submethod,output_dir,output_file,output_dir,output_dir)
             cmd = prefix_cmd+render_cmd
             subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
     #except:

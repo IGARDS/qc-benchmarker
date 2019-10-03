@@ -12,6 +12,7 @@ apt --yes install gnuplot
 apt --yes install unzip
 apt --yes install expat
 apt --yes install libexpat1-dev
+apt --yes install wine-stable
 
 useradd tpp
 
