@@ -8,4 +8,4 @@ if OUTPUT_DIR[-1] != "/":
     
 FILES_TO_RENDER = ["sample.Rmd","lc.Rmd","source.Rmd","ms1.Rmd","ms2.Rmd","master.Rmd"] # These are processed in order
 
-DISABLE=True
+DISABLE=False
